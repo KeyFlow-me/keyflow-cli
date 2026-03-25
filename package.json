@@ -1,0 +1,56 @@
+{
+  "name": "@keyflow-blog/cli",
+  "version": "2026.3.30",
+  "description": "KeyFlow Editorial Studio CLI - Push markdown drafts to your blog from the terminal",
+  "main": "dist/index.js",
+  "bin": {
+    "keyflow": "dist/index.js"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "postinstall": "node dist/postinstall.js",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KeyFlow-me/keyflow-cli.git"
+  },
+  "keywords": [
+    "keyflow",
+    "cli",
+    "blog",
+    "markdown",
+    "editorial",
+    "ai",
+    "writing"
+  ],
+  "author": "KeyFlow <hello@keyflow.me>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KeyFlow-me/keyflow-cli/issues"
+  },
+  "homepage": "https://keyflow.me/tools/cli",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
+}
