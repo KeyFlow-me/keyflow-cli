@@ -1,10 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
+import { createDeviceIdToken } from '../auth/device-auth.js';
 import { loadConfig } from '../lib/config.js';
 export const pushCommand = async (filePath) => {
     const config = loadConfig();
-    if (!config || !config.refreshToken) {
+    if (!config || (!config.deviceCredential && !config.refreshToken)) {
         console.error(chalk.red('\n❌ Error: Not logged in.'));
         console.log(chalk.gray('Please run "keyflow login" first.\n'));
         process.exit(1);
@@ -24,30 +25,12 @@ export const pushCommand = async (filePath) => {
         console.log(chalk.gray(`(Extracted title from Markdown H1)`));
     try {
         console.log(chalk.gray('Refreshing secure session token...'));
-        // In many CLI cases, we need to wait for Firebase to initialize 
-        // and potentially use the refreshToken to get a fresh ID Token.
-        // Simplifying for this flow: If we don't have a currentUser, we just proceed with the error for now
-        // as the login command just ran or the config is there.
-        // To properly refresh in CLI securely without hardcoding our API Keys:
-        // We fetch the latest public API Key directly from our KeyFlow server at runtime
+        // Exchange the saved local session for a short-lived Firebase ID token.
+        // The browser login callback never sends this refresh token directly.
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.keyflow.me';
-        console.log(chalk.gray('Securely fetching environment configuration...'));
-        const configRes = await fetch(`${baseUrl}/api/cli/config`);
-        if (!configRes.ok) {
-            throw new Error('Failed to retrieve KeyFlow platform configuration');
-        }
-        const { apiKey } = await configRes.json();
-        const refreshRes = await fetch(`https://securetoken.googleapis.com/v1/token?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `grant_type=refresh_token&refresh_token=${config.refreshToken}`
-        });
-        const refreshData = await refreshRes.json();
-        if (!refreshData.id_token) {
-            console.error(chalk.red('\n[DEBUG] Token refresh failed. Google response:'), refreshData);
-            throw new Error('Session expired. Please run "keyflow login" again.');
-        }
-        const idToken = refreshData.id_token;
+        const idToken = config.deviceCredential
+            ? (await createDeviceIdToken({ baseUrl, deviceCredential: config.deviceCredential })).idToken
+            : await createLegacyRefreshIdToken(baseUrl, config.refreshToken);
         console.log(chalk.gray('Uploading content to KeyFlow...'));
         const response = await fetch(`${baseUrl}/api/cli/draft`, {
             method: 'POST',
@@ -76,3 +59,24 @@ export const pushCommand = async (filePath) => {
         process.exit(1);
     }
 };
+async function createLegacyRefreshIdToken(baseUrl, refreshToken) {
+    console.log(chalk.gray('Using legacy refresh-token session. Run "keyflow login" to migrate this device.'));
+    const configRes = await fetch(`${baseUrl}/api/cli/config`);
+    if (!configRes.ok) {
+        throw new Error('Failed to retrieve KeyFlow platform configuration');
+    }
+    const { apiKey } = await configRes.json();
+    const refreshRes = await fetch(`https://securetoken.googleapis.com/v1/token?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+        }).toString()
+    });
+    const refreshData = await refreshRes.json().catch(() => ({}));
+    if (!refreshData.id_token) {
+        throw new Error('Session expired. Please run "keyflow login" again.');
+    }
+    return refreshData.id_token;
+}
