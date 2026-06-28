@@ -1,6 +1,6 @@
 {
   "name": "@keyflow-blog/cli",
-  "version": "2026.3.30",
+  "version": "2026.6.28",
   "description": "KeyFlow Editorial Studio CLI - Push markdown drafts to your blog from the terminal",
   "main": "dist/index.js",
   "bin": {
@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "node --test tests/*.test.mjs",
     "start": "node dist/index.js",
     "dev": "node --loader ts-node/esm src/index.ts",
     "postinstall": "node dist/postinstall.js",

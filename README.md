@@ -10,6 +10,8 @@ Push markdown drafts directly from your terminal—or let your AI agents do it f
 - **Effortless Publishing**: Upload any local `.md` file as a private draft in seconds.
 - **Smart Parsing**: Automatically extracts the `<h1>` (e.g., `# My Title`) from your markdown to use as the post title.
 - **Browser Authentication**: Secure one-time browser approval. The browser sends only a short-lived one-time code to the local callback.
+- **Account Controls**: Log in, log out, inspect local session status, and verify the installed CLI version.
+- **Update Checks**: Compare your installed CLI with the latest npm release before choosing to update.
 - **Agentic Workflow Ready**: Supports headless execution with `KEYFLOW_DEVICE_CREDENTIAL` for controlled CI/agent environments.
 - **Safe by Default**: All pushed content lands as a **private draft**. You always have the final say before publishing to the world.
 
@@ -62,7 +64,16 @@ Verify your current session and connection status.
 keyflow status
 ```
 
-### 3. Push a Draft
+### 3. Log Out
+Remove the local CLI session file.
+
+```bash
+keyflow logout
+```
+
+`logout` clears `~/.keyflow/config.json` and the legacy local session fallback in the current directory. If `KEYFLOW_DEVICE_CREDENTIAL` or `KEYFLOW_REFRESH_TOKEN` is still set in your shell, commands in that shell can still authenticate through those environment variables.
+
+### 4. Push a Draft
 Upload a local markdown file.  
 *(Make sure the first line of your file is an `# H1 Header`—KeyFlow CLI will automatically use it as the title!)*
 
@@ -70,7 +81,35 @@ Upload a local markdown file.
 keyflow push my-article.md
 ```
 
-Your file will instantly appear in the **All Posts** section of your KeyFlow Editorial Studio as a private draft.
+The CLI sends `status: draft` and `visibility: private`, then verifies the server response contains a draft `postId`. Your file will appear in the **All Posts** section of your KeyFlow Editorial Studio as a private draft.
+
+Validate the local file and extracted title without uploading:
+
+```bash
+keyflow push my-article.md --dry-run
+```
+
+### 5. Version and Updates
+Show the installed CLI version:
+
+```bash
+keyflow version
+```
+
+Check the latest npm release:
+
+```bash
+keyflow version --check
+keyflow update
+```
+
+`keyflow update` checks whether a newer release exists and prints the npm install command. It does not modify your system by default.
+
+To explicitly run the global npm update:
+
+```bash
+keyflow update --yes
+```
 
 ---
 
@@ -99,6 +138,30 @@ When a command needs authentication, the CLI checks credentials in this order:
 4. Legacy `./.keyflow_session.json` fallback for older local installs.
 
 Use `KEYFLOW_DEVICE_CREDENTIAL` only in controlled CI or agent environments. For normal local use, run `keyflow login`.
+
+### Recommended AI Agent Prompt
+
+Use this prompt when asking an AI coding agent to create or upload a KeyFlow draft:
+
+```text
+You are preparing a KeyFlow draft with the KeyFlow CLI.
+
+Rules:
+- Never ask for, print, log, or store KeyFlow credentials, Firebase tokens, device credentials, refresh tokens, or `.env` values.
+- Use an existing authenticated local CLI session when available.
+- If authentication is missing, ask the human to run `keyflow login` locally or provide `KEYFLOW_DEVICE_CREDENTIAL` through their own secret manager. Do not request the credential in chat.
+- Create or update a Markdown file with a clear H1 title.
+- Run `keyflow push <file> --dry-run` first and fix any local validation errors.
+- Only run `keyflow push <file>` after the human has approved creating a private draft in KeyFlow.
+- Treat the upload as draft-only. Do not claim the post is published.
+- Report the resulting Draft ID and URL if the CLI prints them.
+```
+
+For non-interactive agent runs, keep `KEYFLOW_DEVICE_CREDENTIAL` in the runner's secret store and inject it only for the command that needs it:
+
+```bash
+KEYFLOW_DEVICE_CREDENTIAL="$KEYFLOW_DEVICE_CREDENTIAL" keyflow push generated-article.md
+```
 
 ---
 
