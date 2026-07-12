@@ -52,3 +52,14 @@ firebase-debug.log
 
 # emulator data
 /firebase-data
+
+# agentplaybook-project-assets:start
+# Runtime evidence is local, but canonical project skills are repository assets.
+!.agentplaybook/
+.agentplaybook/*
+!.agentplaybook/.gitignore
+!.agentplaybook/skills/
+.agentplaybook/skills/*
+!.agentplaybook/skills/graphify/
+!.agentplaybook/skills/graphify/**
+# agentplaybook-project-assets:end
