@@ -35,8 +35,8 @@ The secure device auth work replaced direct browser token delivery with one-time
 
 ## Non-Goals
 
-- Do not add publish-now behavior. `push` must continue to create private drafts only.
-- Do not add cover image upload in this slice.
+- ~~Do not add publish-now behavior. `push` must continue to create private drafts only.~~ Superseded by [`cli-simple-publishing-prd.md`](cli-simple-publishing-prd.md): `publish: true` or `--publish` publishes; the default is still a private draft.
+- ~~Do not add cover image upload in this slice.~~ Superseded by [`cli-simple-publishing-prd.md`](cli-simple-publishing-prd.md): local `cover` and body images are uploaded.
 - Do not change Web `/api/cli/draft` behavior in this slice.
 - Do not run a real draft upload automatically during agent verification because it creates user account state.
 - Do not remove legacy refresh-token support yet; keep it as a migration fallback.
