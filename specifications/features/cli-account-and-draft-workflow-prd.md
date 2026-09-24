@@ -126,7 +126,7 @@ Required automated checks:
 - `npm run test`
 - `npm run build`
 - `git diff --check`
-- `npx --yes @taehwandev/vibeguard audit . --rules "$AGENTPLAYBOOK_HOME"`
+- `npx --yes @taehwandev/vibeguard audit . --rules "$TAO_HOME"`
 
 Required local smoke checks:
 
