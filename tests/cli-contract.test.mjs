@@ -27,12 +27,24 @@ test('logout clears only local CLI session state', () => {
   assert.match(logoutSource, /KEYFLOW_REFRESH_TOKEN/);
 });
 
-test('push validates draft uploads and supports local dry runs', () => {
+test('push validates uploads, runs offline checks first, and supports dry runs', () => {
   assert.match(indexSource, /\.option\('--dry-run'/);
-  assert.match(pushSource, /status:\s*'draft'/);
-  assert.match(pushSource, /visibility:\s*'private'/);
+  assert.match(indexSource, /\.option\('--publish'/);
+  assert.match(indexSource, /\.option\('--json'/);
+  assert.match(pushSource, /analyzeMarkdown\(/);
+  assert.match(pushSource, /status:\s*post\.status/);
+  assert.match(pushSource, /visibility:\s*post\.visibility/);
   assert.match(pushSource, /!result\.postId/);
-  assert.match(pushSource, /Draft uploaded and verified/);
+  assert.match(pushSource, /writeKeyflowIdentity\(/);
+});
+
+test('registers the AI agent commands and puts the guide hint first in help', () => {
+  assert.match(indexSource, /\.command\('check'\)/);
+  assert.match(indexSource, /\.command\('guide'\)/);
+  assert.match(indexSource, /\.command\('agent'\)/);
+  assert.match(indexSource, /\.command\('setup'\)/);
+  assert.match(indexSource, /addHelpText\('beforeAll'/);
+  assert.match(indexSource, /run `keyflow guide` first/);
 });
 
 test('update is explicit before running npm install globally', () => {
