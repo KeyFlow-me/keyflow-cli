@@ -1,0 +1,8 @@
+# tao-project-assets:start
+/*
+!/.gitignore
+!/skills/
+/skills/*
+!/skills/graphify/
+!/skills/graphify/**
+# tao-project-assets:end
