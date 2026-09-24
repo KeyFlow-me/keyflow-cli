@@ -1,6 +1,6 @@
 {
   "name": "@keyflow-blog/cli",
-  "version": "2026.6.28",
+  "version": "2026.9.24",
   "description": "KeyFlow Editorial Studio CLI - Push markdown drafts to your blog from the terminal",
   "main": "dist/index.js",
   "bin": {
