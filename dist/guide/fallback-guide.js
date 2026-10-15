@@ -28,12 +28,15 @@ visibility: public        # public | followers | private
 cover: ./images/cover.png # local path or https URL
 summary: One-line summary # default: AI summary
 language: en              # ko | en, default: auto-detect
+translation_of: ./post.ko.md # other language version: path or KeyFlow post id
 ---
 \`\`\`
 
 - Default: private draft. \`publish: true\` without \`visibility\` publishes as \`public\`.
 - After the first push the CLI writes \`keyflow.id\` and \`keyflow.url\` into the frontmatter.
   Do not edit them. The next push updates the same post. Delete the \`keyflow\` block to create a new post.
+- \`translation_of\` links this file to the same post in another language. A path is relative to this file,
+  and that file must be pushed first (it needs \`keyflow.id\`). Both files' \`language\` must differ.
 - Local image paths (\`![alt](./images/a.png)\`) are resolved relative to the file and uploaded.
   PNG, JPEG, WebP, GIF only; 10MB per image; 50 images per push.
 

@@ -97,6 +97,7 @@ visibility: public              # public | followers | private
 cover: ./images/cover.png       # local path or https URL
 summary: One-line summary       # default: KeyFlow writes an AI summary
 language: en                    # ko | en, default: detected
+translation_of: ./post.ko.md    # other language version: path or KeyFlow post id
 keyflow:                        # written by the CLI after the first push; do not edit
   id: cli_1790000000000
   url: https://www.keyflow.me/@me/post/...
@@ -106,6 +107,7 @@ keyflow:                        # written by the CLI after the first push; do no
 - No frontmatter works exactly like before: the first `# H1` is the title.
 - When the title comes from the first `# H1`, that heading is removed from the uploaded body so the title is not shown twice.
 - Defaults: without `publish: true` the post is a draft with `visibility: private`. With `publish: true` (or `--publish` for a single run) and no `visibility`, it is published as `public`.
+- `translation_of` links a Korean and an English version of the same post. Use a path relative to the file (that file must be pushed first so it has `keyflow.id`) or a KeyFlow post id. `keyflow check` fails when the file is missing, not pushed yet, or uses the same `language`.
 - `series` is read from the frontmatter but not sent yet; the current server contract has no series field.
 
 #### Updating the same post

@@ -11,6 +11,8 @@ export type PostMeta = {
   cover?: string;
   summary?: string;
   language?: string;
+  /** Raw `translation_of`: a path to the other language's markdown file, or a KeyFlow post id. */
+  translationOf?: string;
   keyflowId?: string;
   keyflowUrl?: string;
 };
@@ -42,6 +44,7 @@ export function parseFrontmatter(doc: SplitDocument): PostMeta {
     cover: asString(record.cover),
     summary: asString(record.summary),
     language: asString(record.language),
+    translationOf: asString(record.translation_of),
     keyflowId: asString(keyflow.id),
     keyflowUrl: asString(keyflow.url),
   };

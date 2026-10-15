@@ -273,6 +273,33 @@ test('check limits a push to 50 images and flags invalid frontmatter', () => {
   assert.deepEqual(badVisibility.items.map((item) => [item.code, item.line]), [['invalid-visibility', 2]]);
 });
 
+test('translation_of resolves a pushed file to its keyflow.id and accepts a post id as is', () => {
+  const dir = tempDir();
+  writeFileSync(path.join(dir, 'note.ko.md'), '---\nlanguage: ko\nkeyflow:\n  id: cli_ko_1\n---\n# 노트\n본문');
+  const linked = analyzeMarkdown(path.join(dir, 'note.en.md'), '---\nlanguage: en\ntranslation_of: ./note.ko.md\n---\n# Note\nbody');
+  assert.deepEqual(linked.items, []);
+  assert.equal(linked.post.translationOf, 'cli_ko_1');
+
+  const byId = analyzeMarkdown(path.join(dir, 'other.md'), '---\ntranslation_of: cli_ko_1\n---\n# Note\nbody');
+  assert.deepEqual(byId.items, []);
+  assert.equal(byId.post.translationOf, 'cli_ko_1');
+
+  const none = analyzeMarkdown(path.join(dir, 'plain.md'), '# Note\nbody');
+  assert.equal(none.post.translationOf, undefined);
+});
+
+test('translation_of fails check when the file is missing, not pushed, the same language, or this file', () => {
+  const dir = tempDir();
+  writeFileSync(path.join(dir, 'draft.ko.md'), '---\nlanguage: ko\n---\n# 초안\n본문');
+  writeFileSync(path.join(dir, 'pushed.ko.md'), '---\nlanguage: ko\nkeyflow:\n  id: cli_ko_2\n---\n# 글\n본문');
+  const check = (name, yaml) => analyzeMarkdown(path.join(dir, name), `---\n${yaml}\n---\n# T\nbody`).items.map((item) => [item.code, item.line]);
+
+  assert.deepEqual(check('a.en.md', 'language: en\ntranslation_of: ./gone.ko.md'), [['missing-translation', 3]]);
+  assert.deepEqual(check('b.en.md', 'translation_of: ./draft.ko.md'), [['translation-not-pushed', 2]]);
+  assert.deepEqual(check('c.md', 'language: ko\ntranslation_of: ./pushed.ko.md'), [['same-language-translation', 3]]);
+  assert.deepEqual(check('self.md', 'translation_of: ./self.md'), [['invalid-translation', 2]]);
+});
+
 // --- agent setup -----------------------------------------------------------
 
 test('agent block insert is idempotent and never touches other content', () => {

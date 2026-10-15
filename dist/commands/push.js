@@ -72,6 +72,8 @@ const saveDraft = async (baseUrl, idToken, post, body, coverImage) => {
         payload.postId = post.postId;
     if (post.language)
         payload.language = post.language;
+    if (post.translationOf)
+        payload.translationOf = post.translationOf;
     if (post.summary)
         payload.summary = post.summary;
     const response = await fetch(`${baseUrl}/api/cli/draft`, {

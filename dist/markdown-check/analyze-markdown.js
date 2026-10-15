@@ -6,6 +6,7 @@ import { resolveImagePath } from '../images/resolve-image-path.js';
 import { FrontmatterError } from '../post/frontmatter-error.js';
 import { parseFrontmatter } from '../post/parse-frontmatter.js';
 import { resolvePost } from '../post/resolve-post.js';
+import { resolveTranslation } from '../post/resolve-translation.js';
 import { splitDocument } from '../post/split-document.js';
 import { findBlockProblems } from './find-block-problems.js';
 import { findImageProblem } from './find-image-problem.js';
@@ -42,6 +43,16 @@ export function analyzeMarkdown(filePath, source, publish) {
             hint: `Use one of: ${VISIBILITIES.join(', ')}.`,
             severity: 'error',
         });
+    }
+    if (post?.translationOf) {
+        const translation = resolveTranslation(filePath, post.translationOf, post.language);
+        if (translation.ok) {
+            post.translationOf = translation.postId;
+        }
+        else {
+            const { code, message, hint } = translation;
+            items.push({ code, line: frontmatterKeyLine(doc.yaml, 'translation_of'), message, hint, severity: 'error' });
+        }
     }
     if (post && !post.body.trim()) {
         items.push({
