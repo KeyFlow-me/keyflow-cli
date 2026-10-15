@@ -33,6 +33,7 @@ export function resolvePost(doc, meta, options) {
         cover: meta.cover,
         summary: meta.summary,
         language: meta.language,
+        translationOf: meta.translationOf,
         postId: meta.keyflowId,
         existingUrl: meta.keyflowUrl,
     };

@@ -30,6 +30,7 @@ export function parseFrontmatter(doc) {
         cover: asString(record.cover),
         summary: asString(record.summary),
         language: asString(record.language),
+        translationOf: asString(record.translation_of),
         keyflowId: asString(keyflow.id),
         keyflowUrl: asString(keyflow.url),
     };

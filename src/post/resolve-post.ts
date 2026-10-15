@@ -13,6 +13,8 @@ export type ResolvedPost = {
   cover?: string;
   summary?: string;
   language?: string;
+  /** Raw `translation_of`; analyzeMarkdown replaces it with the resolved post id. */
+  translationOf?: string;
   postId?: string;
   existingUrl?: string;
 };
@@ -61,6 +63,7 @@ export function resolvePost(doc: SplitDocument, meta: PostMeta, options: Resolve
     cover: meta.cover,
     summary: meta.summary,
     language: meta.language,
+    translationOf: meta.translationOf,
     postId: meta.keyflowId,
     existingUrl: meta.keyflowUrl,
   };

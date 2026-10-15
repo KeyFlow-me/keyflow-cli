@@ -59,6 +59,7 @@ All fields are optional. No frontmatter behaves like the previous CLI: the first
 | `cover` | Local path (uploaded with `usage: cover`) or `https` URL. Sent as `coverImage`. |
 | `summary` | Sent as `summary`; the server skips the AI summary. |
 | `language` | Sent as `language`. |
+| `translation_of` | Links the other language version. A value with a path separator or a `.md`/`.markdown`/`.mdx` extension is a path relative to the file and resolves to that file's `keyflow.id`; any other value is a KeyFlow post id. Sent as `translationOf`. `check` fails when the path is missing or points to this file, the target has no `keyflow.id` yet, or both files set the same `language`. Servers that do not support it ignore the field. |
 | `keyflow.id`, `keyflow.url` | Written by the CLI. `keyflow.id` is sent as `postId`. |
 
 ### 4.1 ID write-back
