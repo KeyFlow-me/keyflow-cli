@@ -6,14 +6,21 @@ import { printCatLogo } from '../lib/logo.js';
 
 const AUTH_CALLBACK_PORT = 4242;
 
-export const loginCommand = async () => {
+export const loginCommand = async (options: { account?: string } = {}) => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.keyflow.me';
   const allowedOrigin = new URL(baseUrl).origin;
   const authRequest = createDeviceAuthRequest();
+  const account = options.account ?? process.env.KEYFLOW_ACCOUNT;
+  if (account !== undefined && !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$/.test(account)) {
+    console.error('Invalid account username.');
+    process.exitCode = 1;
+    return;
+  }
   const authUrl = new URL('/ko/manage/cli/auth', baseUrl);
   authUrl.searchParams.set('port', `${AUTH_CALLBACK_PORT}`);
   authUrl.searchParams.set('state', authRequest.state);
   authUrl.searchParams.set('code_challenge', authRequest.codeChallenge);
+  if (account) authUrl.searchParams.set('username', account);
 
   printCatLogo();
   console.log(chalk.gray('Opening your browser for one-time KeyFlow authentication...'));
@@ -23,6 +30,7 @@ export const loginCommand = async () => {
     baseUrl,
     allowedOrigin,
     authRequest,
+    account,
   });
 
   // Bind explicitly to IPv4 loopback to avoid browser IPv6/IPv4 localhost mismatch.

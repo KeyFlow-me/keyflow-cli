@@ -47,10 +47,22 @@ async function signInWithCustomToken(baseUrl: string, customToken: string) {
     throw new Error(tokenData.error?.message || 'Failed to create CLI session');
   }
 
+  // Custom-token sign-in does not guarantee localId/email in its response.
+  // Resolve identity from the ID token through Firebase before saving or uploading.
+  const userRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken: tokenData.idToken }),
+  });
+  const userData = await userRes.json().catch(() => ({}));
+  const user = userData.users?.[0];
+  if (!userRes.ok || typeof user?.localId !== 'string' || !user.localId || user.disabled) {
+    throw new Error('Failed to verify CLI account identity');
+  }
   return {
     idToken: tokenData.idToken as string,
-    email: (tokenData.email || '') as string,
-    uid: (tokenData.localId || '') as string,
+    email: (user.email || '') as string,
+    uid: user.localId as string,
   };
 }
 
@@ -72,7 +84,11 @@ export const createDeviceIdToken = async ({
     throw new Error(sessionData.error || 'Failed to create CLI device session');
   }
 
-  return signInWithCustomToken(baseUrl, sessionData.customToken as string);
+  const session = await signInWithCustomToken(baseUrl, sessionData.customToken as string);
+  return {
+    ...session,
+    username: typeof sessionData.username === 'string' ? sessionData.username : undefined,
+  };
 };
 
 export const exchangeDeviceCodeForSession = async ({
@@ -105,5 +121,6 @@ export const exchangeDeviceCodeForSession = async ({
     tokenType: (exchangeData.tokenType || 'keyflow_device_v1') as string,
     email: session.email,
     uid: session.uid,
+    username: session.username,
   };
 };

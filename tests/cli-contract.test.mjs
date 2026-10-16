@@ -21,7 +21,7 @@ test('registers the complete local account command set', () => {
 });
 
 test('logout clears only local CLI session state', () => {
-  assert.match(logoutSource, /clearConfig\(\)/);
+  assert.match(logoutSource, /clearConfig\(options\.account, options\.all\)/);
   assert.match(logoutSource, /Could not remove every local KeyFlow session file/);
   assert.match(logoutSource, /KEYFLOW_DEVICE_CREDENTIAL/);
   assert.match(logoutSource, /KEYFLOW_REFRESH_TOKEN/);

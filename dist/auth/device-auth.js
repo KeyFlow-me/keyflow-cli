@@ -30,10 +30,22 @@ async function signInWithCustomToken(baseUrl, customToken) {
     if (!tokenRes.ok || !tokenData.idToken) {
         throw new Error(tokenData.error?.message || 'Failed to create CLI session');
     }
+    // Custom-token sign-in does not guarantee localId/email in its response.
+    // Resolve identity from the ID token through Firebase before saving or uploading.
+    const userRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: tokenData.idToken }),
+    });
+    const userData = await userRes.json().catch(() => ({}));
+    const user = userData.users?.[0];
+    if (!userRes.ok || typeof user?.localId !== 'string' || !user.localId || user.disabled) {
+        throw new Error('Failed to verify CLI account identity');
+    }
     return {
         idToken: tokenData.idToken,
-        email: (tokenData.email || ''),
-        uid: (tokenData.localId || ''),
+        email: (user.email || ''),
+        uid: user.localId,
     };
 }
 export const createDeviceIdToken = async ({ baseUrl, deviceCredential, }) => {
@@ -49,7 +61,11 @@ export const createDeviceIdToken = async ({ baseUrl, deviceCredential, }) => {
     if (!sessionRes.ok || !sessionData.customToken) {
         throw new Error(sessionData.error || 'Failed to create CLI device session');
     }
-    return signInWithCustomToken(baseUrl, sessionData.customToken);
+    const session = await signInWithCustomToken(baseUrl, sessionData.customToken);
+    return {
+        ...session,
+        username: typeof sessionData.username === 'string' ? sessionData.username : undefined,
+    };
 };
 export const exchangeDeviceCodeForSession = async ({ baseUrl, code, codeVerifier, }) => {
     const exchangeRes = await fetch(`${baseUrl}/api/auth/device/exchange`, {
@@ -74,5 +90,6 @@ export const exchangeDeviceCodeForSession = async ({ baseUrl, code, codeVerifier
         tokenType: (exchangeData.tokenType || 'keyflow_device_v1'),
         email: session.email,
         uid: session.uid,
+        username: session.username,
     };
 };

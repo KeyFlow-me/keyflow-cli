@@ -9,6 +9,7 @@ import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
 import { pushCommand } from './commands/push.js';
 import { statusCommand } from './commands/status.js';
+import { AccountCommands } from './commands/account.js';
 import { updateCommand } from './commands/update.js';
 import { versionCommand } from './commands/version.js';
 import { checkCommand } from './commands/check.js';
@@ -42,17 +43,27 @@ program
 program
     .command('login')
     .description('Login to KeyFlow Blog with secure browser approval')
+    .option('--account <name>', 'Save a separate account; the approved username must match')
     .action(loginCommand);
 
 program
     .command('logout')
     .description('Remove the local KeyFlow CLI session')
+    .option('--account <name>', 'Remove only this saved account')
+    .option('--all', 'Remove all locally saved accounts')
     .action(logoutCommand);
 
 program
     .command('status')
     .description('Check current login status')
+    .option('--account <name>', 'Inspect this saved account')
     .action(statusCommand);
+
+const account = program.command('account').description('Keep and select independent KeyFlow connections');
+account.command('list').description('List saved accounts without credentials')
+    .option('--json', 'Print safe account metadata as JSON').action(AccountCommands.list);
+account.command('use <name>').description('Select the default saved account').action(AccountCommands.use);
+account.command('save <name>').description('Name and keep the current local connection').action(AccountCommands.save);
 
 program
     .command('version')
@@ -73,6 +84,7 @@ program
     .option('--dry-run', 'Check the file locally without uploading')
     .option('--publish', 'Publish this time (same as publish: true; the file is not changed)')
     .option('--json', 'Print a machine-readable result')
+    .option('--account <name>', 'Upload using only this saved account')
     .action(pushCommand);
 
 program

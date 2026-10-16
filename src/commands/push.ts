@@ -23,6 +23,7 @@ type PushOptions = {
   dryRun?: boolean;
   publish?: boolean;
   json?: boolean;
+  account?: string;
 };
 
 type ImageStats = { total: number; uploaded: number; reused: number };
@@ -39,6 +40,7 @@ type PushJson = {
   updated?: boolean;
   fileUpdated?: boolean;
   images?: ImageStats;
+  account?: string;
   items?: CheckItem[];
   error?: { code?: string; message: string; hint?: string };
 };
@@ -165,12 +167,18 @@ export const pushCommand = async (filePath: string, options: PushOptions = {}) =
     finish({ ok: true, dryRun: true, ...summary, postId: post.postId, images: { total: analysis.images.length, uploaded: 0, reused: 0 } }, 0);
   }
 
-  const config = loadConfig();
+  let config;
+  try { config = loadConfig(options.account); }
+  catch (error) {
+    fail({}, error instanceof Error ? error.message : 'Could not select the account.',
+      'Run "keyflow account list" and choose an existing account.', 'account-selection-failed');
+  }
   if (!config || (!config.deviceCredential && !config.refreshToken)) {
     fail({}, 'Not logged in.', 'Run "keyflow login" first.', 'not-logged-in');
   }
 
   try {
+    log(chalk.gray(`Account: ${config!.accountName || config!.username || config!.email}`));
     log(chalk.gray('Refreshing secure session token...'));
     const idToken = await getIdToken(baseUrl, config!, (message) => log(chalk.gray(message)));
     const content = await prepareContent(absolutePath, post, analysis.images, { baseUrl, idToken, log });
@@ -190,7 +198,7 @@ export const pushCommand = async (filePath: string, options: PushOptions = {}) =
     log(chalk.gray(`Status: ${modeLabel}${isUpdate ? ' (updated existing post)' : ''}`));
     if (fileUpdated) log(chalk.gray('Saved keyflow.id and keyflow.url to the file frontmatter.'));
     log('');
-    finish({ ok: true, ...summary, postId: saved.postId, url: saved.url, updated: isUpdate, fileUpdated, images: content.stats }, 0);
+    finish({ ok: true, ...summary, account: config!.accountName, postId: saved.postId, url: saved.url, updated: isUpdate, fileUpdated, images: content.stats }, 0);
   } catch (error) {
     if (error instanceof KeyflowError) fail({}, `Push failed: ${error.message}`, error.hint, error.code);
     fail({}, `Push failed: ${error instanceof Error ? error.message : String(error)}`, undefined, 'push-failed');

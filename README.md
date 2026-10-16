@@ -38,6 +38,11 @@ npm install -g @keyflow-blog/cli
 
 *(Requires Node.js 18 or higher)*
 
+This release retains the existing CLI package version format `YYYY.M.D`
+(release date in Asia/Seoul), for example `2026.10.16`. Published versions are
+immutable; a later same-day correction increments the final numeric component.
+This release does not migrate the package to the Web application's release-tag scheme.
+
 ---
 
 ## 💻 Usage
@@ -60,6 +65,34 @@ What happens during login:
 There is no token copy/paste step. The browser approval page never sends a Firebase refresh token, Firebase ID token, email, or uid to the local callback.
 The interactive session is saved to `~/.keyflow/config.json` with user-only file permissions.
 
+#### Keep personal and product accounts connected
+
+```bash
+keyflow account save taehwandev    # name the existing local connection, without logging out
+keyflow login --account moru      # approve while signed into @moru in the browser
+keyflow account list              # metadata only; never prints credentials
+keyflow push moru.md --account moru
+keyflow push personal.md --account taehwandev
+keyflow account use taehwandev     # choose the default for commands without --account
+keyflow status --account moru
+```
+
+Each saved connection belongs to one authenticated user. Named login checks the actual
+KeyFlow username; use another browser or an incognito window when switching browser
+accounts. It requires a server supporting username confirmation and fails safely on
+older servers. `account save` labels an existing connection locally without verifying
+that label as a username.
+
+Saved connections live in `~/.keyflow/accounts.json` (user-only permissions). The active
+connection remains in the Desktop-compatible `config.json`; existing sessions are
+preserved on the first mutation. Selection is `--account`, then `KEYFLOW_ACCOUNT`,
+then the existing environment-credential/default-session behavior. An unknown named
+account fails rather than falling back to another user's credentials. Automation and
+agents should pass `--account` explicitly when more than one account is available.
+New sessions are bound to their server origin and their Firebase UID is checked before
+upload. Use separate markdown files per author; an existing `keyflow.id` belongs to its
+original author and cannot be transferred by selecting another account.
+
 ### 2. Check Status
 Verify your current session and connection status.
 
@@ -68,13 +101,18 @@ keyflow status
 ```
 
 ### 3. Log Out
-Remove the local CLI session file.
+Remove the selected local connection, or explicitly remove every saved connection.
 
 ```bash
 keyflow logout
+keyflow logout --account moru
+keyflow logout --all
 ```
 
-`logout` clears `~/.keyflow/config.json` and the legacy local session fallback in the current directory. If `KEYFLOW_DEVICE_CREDENTIAL` or `KEYFLOW_REFRESH_TOKEN` is still set in your shell, commands in that shell can still authenticate through those environment variables.
+`logout` removes the selected account (`KEYFLOW_ACCOUNT` if set, otherwise the active
+connection). Other saved accounts remain. `--all` removes all local saved sessions.
+Environment credentials remain set until you unset them; logout never revokes credentials
+on the server.
 
 ### 4. Push a Post
 The whole flow is one file and one command:

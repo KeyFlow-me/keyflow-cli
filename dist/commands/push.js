@@ -125,11 +125,18 @@ export const pushCommand = async (filePath, options = {}) => {
         log(chalk.gray('No network request was sent.\n'));
         finish({ ok: true, dryRun: true, ...summary, postId: post.postId, images: { total: analysis.images.length, uploaded: 0, reused: 0 } }, 0);
     }
-    const config = loadConfig();
+    let config;
+    try {
+        config = loadConfig(options.account);
+    }
+    catch (error) {
+        fail({}, error instanceof Error ? error.message : 'Could not select the account.', 'Run "keyflow account list" and choose an existing account.', 'account-selection-failed');
+    }
     if (!config || (!config.deviceCredential && !config.refreshToken)) {
         fail({}, 'Not logged in.', 'Run "keyflow login" first.', 'not-logged-in');
     }
     try {
+        log(chalk.gray(`Account: ${config.accountName || config.username || config.email}`));
         log(chalk.gray('Refreshing secure session token...'));
         const idToken = await getIdToken(baseUrl, config, (message) => log(chalk.gray(message)));
         const content = await prepareContent(absolutePath, post, analysis.images, { baseUrl, idToken, log });
@@ -149,7 +156,7 @@ export const pushCommand = async (filePath, options = {}) => {
         if (fileUpdated)
             log(chalk.gray('Saved keyflow.id and keyflow.url to the file frontmatter.'));
         log('');
-        finish({ ok: true, ...summary, postId: saved.postId, url: saved.url, updated: isUpdate, fileUpdated, images: content.stats }, 0);
+        finish({ ok: true, ...summary, account: config.accountName, postId: saved.postId, url: saved.url, updated: isUpdate, fileUpdated, images: content.stats }, 0);
     }
     catch (error) {
         if (error instanceof KeyflowError)
