@@ -32,6 +32,7 @@ export function checkCommand(filePath, options = {}) {
             title: post?.title,
             status: post?.status,
             visibility: post?.visibility,
+            ...(post?.scheduledAt ? { scheduledAt: post.scheduledAt } : {}),
             images: analysis.images.length,
             errors: analysis.errors,
             warnings: analysis.warnings,
@@ -50,6 +51,8 @@ export function checkCommand(filePath, options = {}) {
     if (analysis.post) {
         console.log(chalk.gray(`Title: ${analysis.post.title}`));
         console.log(chalk.gray(`Mode: ${analysis.post.status} (${analysis.post.visibility})`));
+        if (analysis.post.scheduledAt)
+            console.log(chalk.gray(`Scheduled for: ${analysis.post.scheduledAt} (UTC)`));
     }
     console.log(chalk.gray(`Local images: ${analysis.images.length}\n`));
 }

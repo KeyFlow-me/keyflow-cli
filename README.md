@@ -146,6 +146,8 @@ keyflow:                        # written by the CLI after the first push; do no
 - When the title comes from the first `# H1`, that heading is removed from the uploaded body so the title is not shown twice.
 - Defaults: without `publish: true` the post is a draft with `visibility: private`. With `publish: true` (or `--publish` for a single run) and no `visibility`, it is published as `public`.
 - `translation_of` links a Korean and an English version of the same post. Use a path relative to the file (that file must be pushed first so it has `keyflow.id`) or a KeyFlow post id. `keyflow check` fails when the file is missing, not pushed yet, or uses the same `language`.
+- `scheduled_at: "2026-10-20T09:00:00+09:00"` requests future publication, between one minute and 30 days from the current time. Use your future date and an explicit timezone. Leave `publish` false and omit `--publish`; combining immediate and scheduled publication is rejected. Scheduled drafts default to a future `visibility: public` while newly uploaded cover/content images stay private until publication.
+- Scheduling requires the server's existing Cloud Tasks configuration and writer permissions. Before uploading images or content the CLI requires `capabilities.scheduledPublishing: true` from `/api/cli/config`; an old server fails closed. A success includes a confirmed `schedule` in JSON; saving a draft alone never counts as scheduling. If reservation fails after saving, the CLI exits nonzero, reports `postSaved: true`, and keeps `keyflow.id` so retrying updates that draft. Re-pushing registers a new reservation version; deleting `scheduled_at` from a file does not cancel a server reservation. Manage cancellation in KeyFlow's scheduled-post UI.
 - `series` is read from the frontmatter but not sent yet; the current server contract has no series field.
 
 #### Updating the same post
@@ -153,6 +155,8 @@ keyflow:                        # written by the CLI after the first push; do no
 After the first successful push the CLI writes only `keyflow.id` and `keyflow.url` into the frontmatter (it creates the frontmatter if needed). Every other line in the file stays byte-for-byte the same. This is the only time the CLI changes your file.
 
 The next push sends that ID and updates the same post. If the post was deleted on KeyFlow, pushing the same file recreates it with the same ID; delete the `keyflow:` block to create a separate new post.
+
+For Korean/English editions, push the Korean file first, then add `translation_of: ./post.ko.md` to the English file and push it with the same account. Each file has its own `language`, title, summary, and saved ID. Each edition can be published immediately or scheduled separately; the pair is not an atomic batch.
 
 #### Images
 

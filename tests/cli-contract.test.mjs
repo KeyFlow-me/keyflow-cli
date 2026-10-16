@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { uploadPost } from '../dist/post/upload-post.js';
 
 const indexSource = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
 const pushSource = readFileSync(new URL('../src/commands/push.ts', import.meta.url), 'utf8');
@@ -27,15 +28,22 @@ test('logout clears only local CLI session state', () => {
   assert.match(logoutSource, /KEYFLOW_REFRESH_TOKEN/);
 });
 
-test('push validates uploads, runs offline checks first, and supports dry runs', () => {
+test('push validates uploads, runs offline checks first, and supports dry runs', async () => {
   assert.match(indexSource, /\.option\('--dry-run'/);
   assert.match(indexSource, /\.option\('--publish'/);
   assert.match(indexSource, /\.option\('--json'/);
   assert.match(pushSource, /analyzeMarkdown\(/);
   assert.match(pushSource, /status:\s*post\.status/);
   assert.match(pushSource, /visibility:\s*post\.visibility/);
-  assert.match(pushSource, /!result\.postId/);
   assert.match(pushSource, /writeKeyflowIdentity\(/);
+  const original = globalThis.fetch;
+  try {
+    for (const postId of [undefined, '', 123]) {
+      globalThis.fetch = async () => Response.json({ success: true, postId });
+      await assert.rejects(uploadPost('https://keyflow.test', 'fixture',
+        { title: 'T', tags: [], status: 'draft', visibility: 'private' }, 'body'), /postId/);
+    }
+  } finally { globalThis.fetch = original; }
 });
 
 test('registers the AI agent commands and puts the guide hint first in help', () => {

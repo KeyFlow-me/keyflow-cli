@@ -3,6 +3,8 @@ export class KeyflowError extends Error {
   readonly status: number;
   readonly code?: string;
   readonly hint?: string;
+  /** A server-confirmed draft survives a later scheduling failure. */
+  savedPost?: { postId: string; url?: string };
   constructor(message: string, status: number, code?: string, hint?: string) {
     super(message);
     this.status = status;

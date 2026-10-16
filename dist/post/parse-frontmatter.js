@@ -1,5 +1,6 @@
 import { parse as parseYaml } from 'yaml';
 import { FrontmatterError } from './frontmatter-error.js';
+import { resolveSchedule } from './resolve-schedule.js';
 /** Parse the YAML frontmatter into known post fields. Unknown keys are ignored. */
 export function parseFrontmatter(doc) {
     if (!doc.hasFrontmatter || !doc.yaml.trim())
@@ -31,6 +32,7 @@ export function parseFrontmatter(doc) {
         summary: asString(record.summary),
         language: asString(record.language),
         translationOf: asString(record.translation_of),
+        scheduledAt: record.scheduled_at === undefined ? undefined : resolveSchedule(record.scheduled_at),
         keyflowId: asString(keyflow.id),
         keyflowUrl: asString(keyflow.url),
     };

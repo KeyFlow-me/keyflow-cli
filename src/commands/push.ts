@@ -11,12 +11,12 @@ import { uploadImages } from '../images/upload-images.js';
 import { getBaseUrl } from '../keyflow-api/base-url.js';
 import { getIdToken } from '../keyflow-api/get-id-token.js';
 import { KeyflowError } from '../keyflow-api/keyflow-error.js';
-import { readKeyflowError } from '../keyflow-api/read-keyflow-error.js';
 import { loadConfig } from '../lib/config.js';
 import { analyzeMarkdown } from '../markdown-check/analyze-markdown.js';
 import type { CheckItem } from '../markdown-check/check-item.js';
 import type { ResolvedPost } from '../post/resolve-post.js';
 import { writeKeyflowIdentity } from '../post/write-keyflow-identity.js';
+import { uploadPost } from '../post/upload-post.js';
 import { printCheckItems } from './print-check-items.js';
 
 type PushOptions = {
@@ -41,6 +41,9 @@ type PushJson = {
   fileUpdated?: boolean;
   images?: ImageStats;
   account?: string;
+  postSaved?: boolean;
+  scheduledAt?: string;
+  schedule?: { postId: string; version: string; scheduledAt: string; status: 'scheduled' };
   items?: CheckItem[];
   error?: { code?: string; message: string; hint?: string };
 };
@@ -85,7 +88,7 @@ const prepareContent = async (
   if (images.length === 0) return { body, coverImage, stats };
 
   send.log(chalk.gray(`Checking ${images.length} image(s)...`));
-  const upload = await uploadImages(send.baseUrl, send.idToken, post.visibility, images);
+  const upload = await uploadImages(send.baseUrl, send.idToken, post.scheduledAt ? 'private' : post.visibility, images);
   stats.uploaded = upload.uploaded;
   stats.reused = upload.reused;
   send.log(chalk.gray(`Images: ${upload.uploaded} uploaded, ${upload.reused} already on KeyFlow`));
@@ -96,38 +99,14 @@ const prepareContent = async (
   return { body, coverImage, stats };
 };
 
-/** POST /api/cli/draft and return the verified `{ postId, url }`. */
-const saveDraft = async (baseUrl: string, idToken: string, post: ResolvedPost, body: string, coverImage?: string) => {
-  const payload: Record<string, unknown> = {
-    title: post.title,
-    content: body,
-    status: post.status,
-    visibility: post.visibility,
-  };
-  if (post.tags.length > 0) payload.tags = post.tags;
-  if (coverImage) payload.coverImage = coverImage;
-  if (post.postId) payload.postId = post.postId;
-  if (post.language) payload.language = post.language;
-  if (post.translationOf) payload.translationOf = post.translationOf;
-  if (post.summary) payload.summary = post.summary;
-
-  const response = await fetch(`${baseUrl}/api/cli/draft`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    throw await readKeyflowError(response, 'Server rejected the upload');
+async function requireScheduling(baseUrl: string, idToken: string) {
+  const response = await fetch(`${baseUrl}/api/cli/config`, { headers: { Authorization: `Bearer ${idToken}` } });
+  const config = await response.json().catch(() => null) as { capabilities?: { scheduledPublishing?: unknown } } | null;
+  if (!response.ok || config?.capabilities?.scheduledPublishing !== true) {
+    throw new KeyflowError('This server does not confirm safe CLI scheduled publishing.', response.status,
+      'schedule-not-supported', 'Update the KeyFlow server before scheduling. No images or post were uploaded.');
   }
-  const result = (await response.json().catch(() => ({}))) as { success?: boolean; postId?: unknown; url?: unknown };
-  if (!result.success) {
-    throw new Error('Server rejected the upload');
-  }
-  if (!result.postId || typeof result.postId !== 'string') {
-    throw new Error('Upload response did not include a postId.');
-  }
-  return { postId: result.postId, url: typeof result.url === 'string' ? result.url : undefined };
-};
+}
 
 export const pushCommand = async (filePath: string, options: PushOptions = {}) => {
   const baseUrl = getBaseUrl();
@@ -151,8 +130,9 @@ export const pushCommand = async (filePath: string, options: PushOptions = {}) =
   }
   const post = analysis.post!;
   const isUpdate = Boolean(post.postId);
-  const modeLabel = `${post.status === 'published' ? 'publish' : 'draft'} (${post.visibility})`;
-  const summary = { file: absolutePath, title: post.title, status: post.status, visibility: post.visibility, items: analysis.items };
+  const modeLabel = `${post.scheduledAt ? 'schedule' : post.status === 'published' ? 'publish' : 'draft'} (${post.visibility})`;
+  const summary = { file: absolutePath, title: post.title, status: post.status, visibility: post.visibility,
+    ...(post.scheduledAt ? { scheduledAt: post.scheduledAt } : {}), items: analysis.items };
 
   log(chalk.blue(`\n📤 Preparing to push: ${chalk.bold(post.title)}`));
   log(chalk.gray(`Title source: ${post.titleSource}`));
@@ -181,9 +161,10 @@ export const pushCommand = async (filePath: string, options: PushOptions = {}) =
     log(chalk.gray(`Account: ${config!.accountName || config!.username || config!.email}`));
     log(chalk.gray('Refreshing secure session token...'));
     const idToken = await getIdToken(baseUrl, config!, (message) => log(chalk.gray(message)));
+    if (post.scheduledAt) await requireScheduling(baseUrl, idToken);
     const content = await prepareContent(absolutePath, post, analysis.images, { baseUrl, idToken, log });
     log(chalk.gray('Uploading content to KeyFlow...'));
-    const saved = await saveDraft(baseUrl, idToken, post, content.body, content.coverImage);
+    const saved = await uploadPost(baseUrl, idToken, post, content.body, content.coverImage);
 
     // Remember the post in the file so the next push updates the same post.
     const fileUpdated = saved.postId !== post.postId || Boolean(saved.url && saved.url !== post.existingUrl);
@@ -192,15 +173,24 @@ export const pushCommand = async (filePath: string, options: PushOptions = {}) =
       fs.writeFileSync(absolutePath, writeKeyflowIdentity(current, saved.postId, saved.url));
     }
 
-    log(chalk.green.bold(`\n✅ ${post.status === 'published' ? 'Published' : 'Draft saved'} and verified!`));
+    log(chalk.green.bold(`\n✅ ${post.scheduledAt ? 'Scheduled' : post.status === 'published' ? 'Published' : 'Draft saved'} and verified!`));
+    if (saved.schedule) log(chalk.gray(`Scheduled for: ${saved.schedule.scheduledAt} (UTC)`));
     log(chalk.gray(`Post ID: ${saved.postId}`));
     if (saved.url) log(chalk.gray(`View at: ${saved.url}`));
     log(chalk.gray(`Status: ${modeLabel}${isUpdate ? ' (updated existing post)' : ''}`));
     if (fileUpdated) log(chalk.gray('Saved keyflow.id and keyflow.url to the file frontmatter.'));
     log('');
-    finish({ ok: true, ...summary, account: config!.accountName, postId: saved.postId, url: saved.url, updated: isUpdate, fileUpdated, images: content.stats }, 0);
+    finish({ ok: true, ...summary, schedule: saved.schedule, account: config!.accountName, postId: saved.postId,
+      url: saved.url, updated: isUpdate, fileUpdated, images: content.stats }, 0);
   } catch (error) {
-    if (error instanceof KeyflowError) fail({}, `Push failed: ${error.message}`, error.hint, error.code);
+    if (error instanceof KeyflowError) {
+      if (error.savedPost) {
+        const saved = error.savedPost;
+        fs.writeFileSync(absolutePath, writeKeyflowIdentity(fs.readFileSync(absolutePath, 'utf8'), saved.postId, saved.url));
+        fail({ ...summary, ...saved, postSaved: true }, `Push failed: ${error.message}`, error.hint, error.code);
+      }
+      fail({}, `Push failed: ${error.message}`, error.hint, error.code);
+    }
     fail({}, `Push failed: ${error instanceof Error ? error.message : String(error)}`, undefined, 'push-failed');
   }
 };

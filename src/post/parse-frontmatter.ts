@@ -1,6 +1,7 @@
 import { parse as parseYaml } from 'yaml';
 import { FrontmatterError } from './frontmatter-error.js';
 import type { SplitDocument } from './split-document.js';
+import { resolveSchedule } from './resolve-schedule.js';
 
 export type PostMeta = {
   title?: string;
@@ -13,6 +14,7 @@ export type PostMeta = {
   language?: string;
   /** Raw `translation_of`: a path to the other language's markdown file, or a KeyFlow post id. */
   translationOf?: string;
+  scheduledAt?: string;
   keyflowId?: string;
   keyflowUrl?: string;
 };
@@ -45,6 +47,7 @@ export function parseFrontmatter(doc: SplitDocument): PostMeta {
     summary: asString(record.summary),
     language: asString(record.language),
     translationOf: asString(record.translation_of),
+    scheduledAt: record.scheduled_at === undefined ? undefined : resolveSchedule(record.scheduled_at),
     keyflowId: asString(keyflow.id),
     keyflowUrl: asString(keyflow.url),
   };

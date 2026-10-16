@@ -1,3 +1,4 @@
+import { FrontmatterError } from './frontmatter-error.js';
 const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
 /**
  * Apply the simple-publishing defaults:
@@ -7,6 +8,9 @@ const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
  */
 export function resolvePost(doc, meta, options) {
     const publish = options.publish === true || meta.publish === true;
+    if (publish && meta.scheduledAt) {
+        throw new FrontmatterError('scheduled_at cannot be combined with publish: true or --publish. Schedule a draft instead.', 1);
+    }
     let title = meta.title;
     let titleSource = 'frontmatter';
     let body = doc.body;
@@ -27,13 +31,14 @@ export function resolvePost(doc, meta, options) {
         titleSource,
         body,
         status: publish ? 'published' : 'draft',
-        visibility: meta.visibility || (publish ? 'public' : 'private'),
+        visibility: meta.visibility || (publish || meta.scheduledAt ? 'public' : 'private'),
         tags: meta.tags,
         series: meta.series,
         cover: meta.cover,
         summary: meta.summary,
         language: meta.language,
         translationOf: meta.translationOf,
+        scheduledAt: meta.scheduledAt,
         postId: meta.keyflowId,
         existingUrl: meta.keyflowUrl,
     };

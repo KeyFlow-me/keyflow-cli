@@ -29,6 +29,7 @@ cover: ./images/cover.png # local path or https URL
 summary: One-line summary # default: AI summary
 language: en              # ko | en, default: auto-detect
 translation_of: ./post.ko.md # other language version: path or KeyFlow post id
+scheduled_at: "2026-10-20T09:00:00+09:00" # optional future time; leave publish false
 ---
 \`\`\`
 
@@ -37,6 +38,12 @@ translation_of: ./post.ko.md # other language version: path or KeyFlow post id
   Do not edit them. The next push updates the same post. Delete the \`keyflow\` block to create a new post.
 - \`translation_of\` links this file to the same post in another language. A path is relative to this file,
   and that file must be pushed first (it needs \`keyflow.id\`). Both files' \`language\` must differ.
+- Add \`scheduled_at\` only for future publication (one minute to 30 days, explicit timezone).
+  Do not combine it with \`publish: true\` or \`--publish\`. A scheduled post remains a draft and new images
+  stay private until the server publishes it. Require a confirmed \`schedule\` result, not just a saved ID.
+  The CLI checks server scheduling support before uploading any images or content.
+  If registration fails after saving, the CLI keeps the ID and exits nonzero. Removing the field does not
+  cancel a server reservation; use KeyFlow's scheduled-post UI. Each language edition is scheduled separately.
 - Local image paths (\`![alt](./images/a.png)\`) are resolved relative to the file and uploaded.
   PNG, JPEG, WebP, GIF only; 10MB per image; 50 images per push.
 

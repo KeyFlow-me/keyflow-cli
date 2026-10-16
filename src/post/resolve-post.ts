@@ -1,5 +1,6 @@
 import type { PostMeta } from './parse-frontmatter.js';
 import type { SplitDocument } from './split-document.js';
+import { FrontmatterError } from './frontmatter-error.js';
 
 export type ResolvedPost = {
   title: string;
@@ -15,6 +16,7 @@ export type ResolvedPost = {
   language?: string;
   /** Raw `translation_of`; analyzeMarkdown replaces it with the resolved post id. */
   translationOf?: string;
+  scheduledAt?: string;
   postId?: string;
   existingUrl?: string;
 };
@@ -36,6 +38,9 @@ const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
  */
 export function resolvePost(doc: SplitDocument, meta: PostMeta, options: ResolveOptions): ResolvedPost {
   const publish = options.publish === true || meta.publish === true;
+  if (publish && meta.scheduledAt) {
+    throw new FrontmatterError('scheduled_at cannot be combined with publish: true or --publish. Schedule a draft instead.', 1);
+  }
   let title = meta.title;
   let titleSource: ResolvedPost['titleSource'] = 'frontmatter';
   let body = doc.body;
@@ -57,13 +62,14 @@ export function resolvePost(doc: SplitDocument, meta: PostMeta, options: Resolve
     titleSource,
     body,
     status: publish ? 'published' : 'draft',
-    visibility: meta.visibility || (publish ? 'public' : 'private'),
+    visibility: meta.visibility || (publish || meta.scheduledAt ? 'public' : 'private'),
     tags: meta.tags,
     series: meta.series,
     cover: meta.cover,
     summary: meta.summary,
     language: meta.language,
     translationOf: meta.translationOf,
+    scheduledAt: meta.scheduledAt,
     postId: meta.keyflowId,
     existingUrl: meta.keyflowUrl,
   };
