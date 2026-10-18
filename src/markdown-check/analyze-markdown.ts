@@ -80,13 +80,14 @@ export function analyzeMarkdown(filePath: string, source: string, publish?: bool
   items.push(...findBlockProblems(doc.body, doc.bodyStartLine));
 
   const candidates: LocalImage[] = [];
+  const root = path.dirname(path.resolve(filePath));
   if (post?.cover && isLocalImagePath(post.cover)) {
     const line = frontmatterKeyLine(doc.yaml, 'cover');
-    candidates.push({ raw: post.cover, absolutePath: resolveImagePath(filePath, post.cover), usage: 'cover', line });
+    candidates.push({ raw: post.cover, absolutePath: resolveImagePath(filePath, post.cover), root, usage: 'cover', line });
   }
   for (const ref of collectLocalImages(doc.body)) {
     const line = doc.bodyStartLine + ref.line - 1;
-    candidates.push({ raw: ref.raw, absolutePath: resolveImagePath(filePath, ref.raw), usage: 'content', line });
+    candidates.push({ raw: ref.raw, absolutePath: resolveImagePath(filePath, ref.raw), root, usage: 'content', line });
   }
 
   const seen = new Set<string>();

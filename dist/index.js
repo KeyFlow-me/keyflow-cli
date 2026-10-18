@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-import * as dotenv from 'dotenv';
-// Load environment variables from the CLI project root first
-dotenv.config();
+// No .env file is loaded: a file in the working directory must never choose where credentials go.
 import { Command } from 'commander';
 import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
@@ -37,6 +35,8 @@ program
     .command('login')
     .description('Login to KeyFlow Blog with secure browser approval')
     .option('--account <name>', 'Save a separate account; the approved username must match')
+    .option('--server <url>', 'Log in to another KeyFlow server (https only); the account stays bound to it')
+    .option('--allow-insecure-localhost', 'Allow --server http://localhost for local development')
     .action(loginCommand);
 program
     .command('logout')

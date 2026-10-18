@@ -1,12 +1,12 @@
 import crypto from 'crypto';
-import fs from 'fs';
 import { imageContentType } from './image-content-type.js';
-/** Hash a local image and read its size and content type for the upload request. */
+import { ImageFileGuard } from './image-file-guard.js';
+/** Read a local image once, re-checking where it lives and what it contains, for the upload request. */
 export function prepareImage(image) {
     const contentType = imageContentType(image.absolutePath);
     if (!contentType)
         throw new Error(`Unsupported image type: ${image.raw}`);
-    const size = fs.statSync(image.absolutePath).size;
-    const sha256 = crypto.createHash('sha256').update(fs.readFileSync(image.absolutePath)).digest('hex');
-    return { ...image, contentType, size, sha256 };
+    const bytes = ImageFileGuard.read(image);
+    const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
+    return { ...image, contentType, size: bytes.length, sha256, bytes };
 }

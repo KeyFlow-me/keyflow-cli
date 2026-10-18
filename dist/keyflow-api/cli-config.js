@@ -1,3 +1,4 @@
+import { keyflowFetch } from './keyflow-fetch.js';
 const requests = new Map();
 /**
  * `GET /api/cli/config` once per server and process. Token exchange and the scheduling
@@ -16,7 +17,7 @@ export function fetchCliConfig(baseUrl) {
     return request;
 }
 async function load(baseUrl) {
-    const response = await fetch(`${baseUrl}/api/cli/config`);
+    const response = await keyflowFetch(new URL(baseUrl).origin, '/api/cli/config');
     const body = await response.json().catch(() => null);
     return {
         ok: response.ok,

@@ -165,9 +165,9 @@ test('uploadImages dedupes by hash, PUTs only missing images with exact headers'
   writeFileSync(path.join(dir, 'a.png'), PNG);
   writeFileSync(path.join(dir, 'copy.png'), PNG);
   const images = [
-    { raw: 'a.png', absolutePath: path.join(dir, 'a.png'), usage: 'content', line: 1 },
-    { raw: 'copy.png', absolutePath: path.join(dir, 'copy.png'), usage: 'content', line: 2 },
-    { raw: 'a.png', absolutePath: path.join(dir, 'a.png'), usage: 'cover', line: 3 },
+    { raw: 'a.png', absolutePath: path.join(dir, 'a.png'), root: dir, usage: 'content', line: 1 },
+    { raw: 'copy.png', absolutePath: path.join(dir, 'copy.png'), root: dir, usage: 'content', line: 2 },
+    { raw: 'a.png', absolutePath: path.join(dir, 'a.png'), root: dir, usage: 'cover', line: 3 },
   ];
   const calls = [];
   const fakeFetch = async (url, init) => {
@@ -210,7 +210,7 @@ test('uploadImages stops with a clear error when the server has no image API (40
   writeFileSync(path.join(dir, 'a.png'), PNG);
   const fakeFetch = async () => new Response('Not found', { status: 404 });
   await assert.rejects(
-    uploadImages('https://kf.test', 't', 'private', [{ raw: 'a.png', absolutePath: path.join(dir, 'a.png'), usage: 'content', line: 1 }], fakeFetch),
+    uploadImages('https://kf.test', 't', 'private', [{ raw: 'a.png', absolutePath: path.join(dir, 'a.png'), root: dir, usage: 'content', line: 1 }], fakeFetch),
     (error) => error.code === 'images-not-supported' && /does not support image upload/.test(error.message),
   );
 });

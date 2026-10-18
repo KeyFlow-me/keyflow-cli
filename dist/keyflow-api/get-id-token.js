@@ -31,8 +31,9 @@ async function createLegacyRefreshIdToken(baseUrl, config, log) {
     if (!platform.ok) {
         throw new Error('Failed to retrieve KeyFlow platform configuration');
     }
-    const refreshRes = await fetch(`https://securetoken.googleapis.com/v1/token?key=${platform.apiKey}`, {
+    const refreshRes = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(platform.apiKey ?? '')}`, {
         method: 'POST',
+        redirect: 'error',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
             grant_type: 'refresh_token',

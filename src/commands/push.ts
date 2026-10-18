@@ -9,8 +9,8 @@ import type { LocalImage } from '../images/local-image.js';
 import { replaceImagePaths } from '../images/replace-image-paths.js';
 import { resolveImagePath } from '../images/resolve-image-path.js';
 import { uploadImages } from '../images/upload-images.js';
-import { getBaseUrl } from '../keyflow-api/base-url.js';
 import { fetchCliConfig } from '../keyflow-api/cli-config.js';
+import { KeyflowServer } from '../keyflow-api/keyflow-server.js';
 import { getIdToken } from '../keyflow-api/get-id-token.js';
 import { KeyflowError } from '../keyflow-api/keyflow-error.js';
 import { loadConfig } from '../lib/config.js';
@@ -110,7 +110,6 @@ async function requireScheduling(baseUrl: string) {
 }
 
 export const pushCommand = async (filePath: string, options: PushOptions = {}) => {
-  const baseUrl = getBaseUrl();
   const absolutePath = path.resolve(process.cwd(), filePath);
   const { log, finish, fail } = createReporter(options.json === true, absolutePath);
 
@@ -137,9 +136,12 @@ export const pushCommand = async (filePath: string, options: PushOptions = {}) =
 
   log(chalk.blue(`\n📤 Preparing to push: ${chalk.bold(post.title)}`));
   log(chalk.gray(`Title source: ${post.titleSource}`));
-  log(chalk.gray(`Target: ${baseUrl}`));
   log(chalk.gray(`Mode: ${modeLabel}${isUpdate ? `, updating ${post.postId}` : ', new post'}`));
-  if (analysis.images.length > 0) log(chalk.gray(`Local images: ${analysis.images.length}`));
+  if (analysis.images.length > 0) {
+    // Show exactly which local files will leave this machine before anything is sent.
+    log(chalk.gray(`Local images to upload: ${analysis.images.length}`));
+    for (const image of analysis.images) log(chalk.gray(`  - ${path.relative(path.dirname(absolutePath), image.absolutePath)}`));
+  }
 
   if (options.dryRun) {
     log(chalk.green.bold('\n✅ Dry run passed.'));
@@ -158,8 +160,16 @@ export const pushCommand = async (filePath: string, options: PushOptions = {}) =
     fail({}, 'Not logged in.', 'Run "keyflow login" first.', 'not-logged-in');
   }
 
+  let baseUrl: string = KeyflowServer.DEFAULT_ORIGIN;
+  try { baseUrl = KeyflowServer.of(config); }
+  catch (error) {
+    fail({}, error instanceof Error ? error.message : 'Invalid KeyFlow server.',
+      'Log in again with "keyflow login".', 'invalid-server');
+  }
+
   try {
     log(chalk.gray(`Account: ${config!.accountName || config!.username || config!.email}`));
+    log(chalk.gray(`Target: ${baseUrl}`));
     log(chalk.gray('Refreshing secure session token...'));
     const logToken = (message: string) => log(chalk.gray(message));
     const idToken = await getIdToken(baseUrl, config!, logToken);

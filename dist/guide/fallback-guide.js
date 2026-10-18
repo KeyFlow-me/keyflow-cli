@@ -45,7 +45,8 @@ scheduled_at: "2026-10-20T09:00:00+09:00" # optional future time; leave publish 
   If registration fails after saving, the CLI keeps the ID and exits nonzero. Removing the field does not
   cancel a server reservation; use KeyFlow's scheduled-post UI. Each language edition is scheduled separately.
 - Local image paths (\`![alt](./images/a.png)\`) are resolved relative to the file and uploaded.
-  PNG, JPEG, WebP, GIF only; 10MB per image; 50 images per push.
+  PNG, JPEG, WebP, GIF only; 10MB per image; 50 images per push. Keep images inside the post's
+  folder as real files: symbolic links and paths outside the folder are rejected.
 
 ## KeyFlow syntax
 

@@ -1,3 +1,5 @@
+import { keyflowFetch } from './keyflow-fetch.js';
+
 export type CliConfigResult = {
   ok: boolean;
   status: number;
@@ -24,7 +26,7 @@ export function fetchCliConfig(baseUrl: string): Promise<CliConfigResult> {
 }
 
 async function load(baseUrl: string): Promise<CliConfigResult> {
-  const response = await fetch(`${baseUrl}/api/cli/config`);
+  const response = await keyflowFetch(new URL(baseUrl).origin, '/api/cli/config');
   const body = await response.json().catch(() => null) as { apiKey?: unknown; capabilities?: { scheduledPublishing?: unknown } } | null;
   return {
     ok: response.ok,

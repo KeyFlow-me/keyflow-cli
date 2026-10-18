@@ -115,7 +115,7 @@ The README must include a reusable prompt for AI agents that:
 ## Safety Requirements
 
 - Never print local credentials, Firebase tokens, device credentials, or refresh tokens.
-- Do not write credentials outside `~/.keyflow/config.json` except for the existing legacy fallback behavior. Short-lived ID tokens may be cached in `~/.keyflow/id-tokens.json` (user-only permissions), keyed by a hash of server origin and credential; `keyflow logout` deletes it, and credentials from environment variables are never cached.
+- Do not read or write credentials outside `~/.keyflow`; the working directory's `.env` and `.keyflow_session.json` are never read. Credentials go only to the server the account logged in to (`https`, or loopback `http` with `--allow-insecure-localhost`), through one request helper that refuses redirects. Short-lived ID tokens may be cached in `~/.keyflow/id-tokens.json` (user-only permissions), keyed by a hash of server origin and credential; `keyflow logout` deletes it, and credentials from environment variables are never cached.
 - Do not create drafts during automated verification unless the tester explicitly runs the real `push` command.
 - Use `HOME="$(mktemp -d)"` for local manual tests that should not touch the developer's real CLI session.
 
@@ -141,8 +141,8 @@ Manual real upload verification, only when the tester accepts the external state
 ```bash
 cd <keyflow-cli-repo>
 CLI_HOME="$(mktemp -d)"
-HOME="$CLI_HOME" NEXT_PUBLIC_BASE_URL=https://www.keyflow.me node dist/index.js login
-HOME="$CLI_HOME" NEXT_PUBLIC_BASE_URL=https://www.keyflow.me node dist/index.js push test_draft.md
+HOME="$CLI_HOME" node dist/index.js login
+HOME="$CLI_HOME" node dist/index.js push test_draft.md
 ```
 
 Expected result:

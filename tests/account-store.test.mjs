@@ -42,14 +42,23 @@ test('named selection beats ambient secrets; unknown names never fall through', 
   assert.equal(loadConfig().deviceCredential,'ambient-fixture');
 `));
 
-test('legacy reads are inert; switching snapshots and list is metadata only', () => scenario(`
+test('a session file in the working directory is never read, migrated or deleted', () => scenario(`
   const legacy=path.join(process.cwd(),'.keyflow_session.json');
   fs.writeFileSync(legacy,JSON.stringify(a));
-  assert.equal(loadConfig().uid,a.uid);
-  assert.deepEqual(AccountStore.list(),[{name:'default',uid:a.uid,email:a.email,active:true}]);
-  assert.equal(fs.existsSync(dir),false);
+  assert.equal(loadConfig(),null);
+  assert.deepEqual(AccountStore.list(),[]);
+  assert.throws(()=>AccountStore.use('default'),/Unknown account/);
   saveConfig(b,'bob');
-  assert.equal(fs.existsSync(legacy),false);
+  assert.equal(loadConfig().uid,b.uid);
+  assert.throws(()=>loadConfig('default'),/Unknown account/);
+  assert.equal(fs.readFileSync(legacy,'utf8'),JSON.stringify(a));
+  clearConfig(undefined,true);
+  assert.equal(fs.readFileSync(legacy,'utf8'),JSON.stringify(a));
+`));
+
+test('switching snapshots and list is metadata only', () => scenario(`
+  saveConfig(a);
+  saveConfig(b,'bob');
   assert.equal(loadConfig('default').uid,a.uid);
   const before=fs.readFileSync(accounts,'utf8');
   assert.equal(JSON.stringify(AccountStore.list()).includes('fixture-'),false);
@@ -112,32 +121,13 @@ test('bare login retains an unnamed previous user instead of replacing default',
   assert.equal(AccountStore.list().filter(x=>x.active).length,1);
 `));
 
-test('visible virtual legacy account supports explicit load and use before migration', () => scenario(`
-  const legacy=path.join(process.cwd(),'.keyflow_session.json');
-  fs.writeFileSync(legacy,JSON.stringify(a));
-  process.env.KEYFLOW_DEVICE_CREDENTIAL='ambient-fixture';
-  const [{name}]=AccountStore.list();
-  assert.equal(name,'default');
-  assert.equal(loadConfig(name).uid,a.uid);
-  assert.equal(fs.existsSync(dir),false);
-  assert.throws(()=>AccountStore.use('unknown'),/Unknown account/);
-  assert.equal(fs.existsSync(dir),false);
-  AccountStore.use(name);
-  assert.equal(loadConfig(name).uid,a.uid);
-  assert.equal(fs.existsSync(legacy),false);
-  assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).uid,a.uid);
-`));
-
 test('explicit all logout clears corrupt registry and flat session without parsing', () => scenario(`
   fs.mkdirSync(dir);
   fs.writeFileSync(file,'broken-flat');
   fs.writeFileSync(accounts,'broken-registry');
-  const legacy=path.join(process.cwd(),'.keyflow_session.json');
-  fs.writeFileSync(legacy,'broken-legacy');
   assert.throws(()=>loadConfig(),/Invalid KeyFlow/);
   assert.throws(()=>AccountStore.list(),/Invalid KeyFlow/);
   clearConfig(undefined,true);
   assert.equal(fs.existsSync(file),false);
   assert.equal(fs.existsSync(accounts),false);
-  assert.equal(fs.existsSync(legacy),false);
 `));
