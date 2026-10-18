@@ -83,6 +83,11 @@ accounts. It requires a server supporting username confirmation and fails safely
 older servers. `account save` labels an existing connection locally without verifying
 that label as a username.
 
+`keyflow push` keeps the short-lived Firebase ID token in `~/.keyflow/id-tokens.json`
+(user-only permissions) and reuses it until five minutes before it expires, so pushes
+within the hour skip the sign-in requests. `keyflow logout` deletes this file, and
+credentials from environment variables are never cached.
+
 Saved connections live in `~/.keyflow/accounts.json` (user-only permissions). The active
 connection remains in the Desktop-compatible `config.json`; existing sessions are
 preserved on the first mutation. Selection is `--account`, then `KEYFLOW_ACCOUNT`,

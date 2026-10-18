@@ -1,12 +1,12 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
-import { randomUUID } from 'crypto';
 import type { CLIConfig } from '../lib/config.js';
+import { IdTokenCache } from './id-token-cache.js';
+import { PrivateFile } from './private-file.js';
 
 // Owner: CLI local persistence; allowed imports: Node IO, config type; forbidden:
 // auth/network/commands. Callers: config and account commands. Check: account-store.test.mjs.
-const directory = path.join(os.homedir(), '.keyflow');
+const directory = PrivateFile.directory();
 const configPath = path.join(directory, 'config.json');
 const accountsPath = path.join(directory, 'accounts.json');
 const legacyPath = path.join(process.cwd(), '.keyflow_session.json');
@@ -69,16 +69,7 @@ function snapshotName(data: Registry, config: CLIConfig): string {
 function snapshot(data: Registry, config: CLIConfig | null) {
   if (config) put(data, snapshotName(data, config), config);
 }
-function atomic(file: string, value: unknown) {
-  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
-  fs.chmodSync(directory, 0o700);
-  const temporary = path.join(directory, `.session-${randomUUID()}.tmp`);
-  try {
-    fs.writeFileSync(temporary, JSON.stringify(value, null, 2), { mode: 0o600, flag: 'wx' });
-    fs.renameSync(temporary, file);
-    fs.chmodSync(file, 0o600);
-  } finally { if (fs.existsSync(temporary)) fs.unlinkSync(temporary); }
-}
+const atomic = PrivateFile.writeJson;
 function remove(file: string) { if (fs.existsSync(file)) fs.unlinkSync(file); }
 
 export const AccountStore = {
@@ -140,6 +131,8 @@ export const AccountStore = {
     AccountStore.save(current, name);
   },
   clear(account?: string, all = false) {
+    // A cached ID token must not outlive the connection that minted it.
+    IdTokenCache.clear();
     if (all) { remove(accountsPath); remove(configPath); remove(legacyPath); return; }
     const data = registry();
     const current = flat();

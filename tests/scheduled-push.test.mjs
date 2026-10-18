@@ -23,20 +23,20 @@ function run(mode) {
       fs.writeFileSync('cover.png',Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6300010000000500010d0a2db40000000049454e44ae426082','hex'));
       fs.writeFileSync('ko.md','---\\nlanguage: ko\\nkeyflow:\\n  id: source-ko\\n---\\n한국어');
       fs.writeFileSync('en.md','---\\ntitle: Moru\\nlanguage: en\\ntranslation_of: ./ko.md\\nscheduled_at: "'+time+'"\\ncover: ./cover.png\\n---\\n![Mo](./cover.png)');
-      let saved, images=0;
+      let saved, images=0, configs=0;
+      const idToken='h.'+Buffer.from(JSON.stringify({user_id:'uid-moru'})).toString('base64url')+'.s';
       globalThis.fetch=async(url,init={})=>{
         const json=(body,status=200)=>Response.json(body,{status});
         if(url.endsWith('/session'))return json({customToken:'custom',username:'moru'});
-        if(url.endsWith('/api/cli/config'))return json({apiKey:'fixture',...(mode==='old'?{}:{capabilities:{scheduledPublishing:true}})});
-        if(url.includes('signInWithCustomToken'))return json({idToken:'id-moru',refreshToken:'fixture',expiresIn:'3600'});
-        if(url.includes('accounts:lookup'))return json({users:[{localId:'uid-moru'}]});
+        if(url.endsWith('/api/cli/config')){configs++;return json({apiKey:'fixture',...(mode==='old'?{}:{capabilities:{scheduledPublishing:true}})});}
+        if(url.includes('signInWithCustomToken'))return json({idToken,refreshToken:'fixture',expiresIn:'3600'});
         if(url.endsWith('/images')){
           images++;
           const b=JSON.parse(init.body); assert.equal(b.visibility,'private');
           return json({images:b.images.map(i=>({...i,url:'https://assets.test/secure/'+i.usage,uploadUrl:null}))});
         }
         if(url.endsWith('/draft')){
-          assert.equal(init.headers.Authorization,'Bearer id-moru');
+          assert.equal(init.headers.Authorization,'Bearer '+idToken);
           saved=JSON.parse(init.body);
           assert.equal(saved.status,'draft'); assert.equal(saved.visibility,'public');
           assert.equal(saved.scheduledAt,time); assert.equal(saved.translationOf,'source-ko');
@@ -49,6 +49,7 @@ function run(mode) {
       };
       process.on('exit',code=>{
         assert.equal(code,mode==='success'?0:1);
+        assert.equal(configs,1);
         if(mode==='old'){
           assert.equal(saved,undefined); assert.equal(images,0);
           assert.doesNotMatch(fs.readFileSync('en.md','utf8'),/id: saved-en/);

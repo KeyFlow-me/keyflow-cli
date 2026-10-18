@@ -35,10 +35,11 @@ CLI login sends `username` in the browser query; approval sends optional
 username from its authenticated UID's user record and rejects mismatches before
 writing a grant. `/api/auth/device/session` adds optional `username` from that
 same verified user. Callbacks and exchange responses remain code/state and
-device-credential-only respectively. The CLI derives UID from the Firebase token
-exchange and Firebase `accounts:lookup`, then checks saved UID/origin for later use.
-Custom-token sign-in alone does not guarantee UID/email response fields; use the
-authenticated ID-token lookup described in the [Firebase REST reference](https://firebase.google.com/docs/reference/rest/auth#section-get-account-info).
+device-credential-only respectively. The CLI reads the UID from the `user_id` claim of the ID token that custom-token
+sign-in returns, then checks saved UID/origin for later use. Custom-token sign-in
+does not return UID/email response fields, so login alone also calls the
+authenticated ID-token lookup described in the [Firebase REST reference](https://firebase.google.com/docs/reference/rest/auth#section-get-account-info)
+to save the email; `push` does not call it.
 No new trust in callback PII.
 
 ## Verification and rollback
