@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
+import { IdTokenCache } from '../account/id-token-cache.js';
 import { collectLocalImages } from '../images/collect-local-images.js';
 import { imageKey } from '../images/image-key.js';
 import { isLocalImagePath } from '../images/is-local-image-path.js';
@@ -8,6 +9,7 @@ import { replaceImagePaths } from '../images/replace-image-paths.js';
 import { resolveImagePath } from '../images/resolve-image-path.js';
 import { uploadImages } from '../images/upload-images.js';
 import { getBaseUrl } from '../keyflow-api/base-url.js';
+import { fetchCliConfig } from '../keyflow-api/cli-config.js';
 import { getIdToken } from '../keyflow-api/get-id-token.js';
 import { KeyflowError } from '../keyflow-api/keyflow-error.js';
 import { loadConfig } from '../lib/config.js';
@@ -56,11 +58,10 @@ const prepareContent = async (file, post, images, send) => {
     }
     return { body, coverImage, stats };
 };
-async function requireScheduling(baseUrl, idToken) {
-    const response = await fetch(`${baseUrl}/api/cli/config`, { headers: { Authorization: `Bearer ${idToken}` } });
-    const config = await response.json().catch(() => null);
-    if (!response.ok || config?.capabilities?.scheduledPublishing !== true) {
-        throw new KeyflowError('This server does not confirm safe CLI scheduled publishing.', response.status, 'schedule-not-supported', 'Update the KeyFlow server before scheduling. No images or post were uploaded.');
+async function requireScheduling(baseUrl) {
+    const config = await fetchCliConfig(baseUrl);
+    if (!config.ok || !config.scheduledPublishing) {
+        throw new KeyflowError('This server does not confirm safe CLI scheduled publishing.', config.status, 'schedule-not-supported', 'Update the KeyFlow server before scheduling. No images or post were uploaded.');
     }
 }
 export const pushCommand = async (filePath, options = {}) => {
@@ -109,12 +110,28 @@ export const pushCommand = async (filePath, options = {}) => {
     try {
         log(chalk.gray(`Account: ${config.accountName || config.username || config.email}`));
         log(chalk.gray('Refreshing secure session token...'));
-        const idToken = await getIdToken(baseUrl, config, (message) => log(chalk.gray(message)));
+        const logToken = (message) => log(chalk.gray(message));
+        const idToken = await getIdToken(baseUrl, config, logToken);
         if (post.scheduledAt)
-            await requireScheduling(baseUrl, idToken);
-        const content = await prepareContent(absolutePath, post, analysis.images, { baseUrl, idToken, log });
-        log(chalk.gray('Uploading content to KeyFlow...'));
-        const saved = await uploadPost(baseUrl, idToken, post, content.body, content.coverImage);
+            await requireScheduling(baseUrl);
+        const send = async (token) => {
+            const content = await prepareContent(absolutePath, post, analysis.images, { baseUrl, idToken: token, log });
+            log(chalk.gray('Uploading content to KeyFlow...'));
+            return { content, saved: await uploadPost(baseUrl, token, post, content.body, content.coverImage) };
+        };
+        let sent;
+        try {
+            sent = await send(idToken);
+        }
+        catch (error) {
+            // The server rejects before saving, so a token reused from an earlier push gets one fresh retry.
+            if (!(error instanceof KeyflowError) || error.status !== 401 || error.savedPost)
+                throw error;
+            IdTokenCache.forget(baseUrl, config);
+            log(chalk.gray('Session token was rejected. Refreshing it once...'));
+            sent = await send(await getIdToken(baseUrl, config, logToken, { fresh: true }));
+        }
+        const { content, saved } = sent;
         // Remember the post in the file so the next push updates the same post.
         const fileUpdated = saved.postId !== post.postId || Boolean(saved.url && saved.url !== post.existingUrl);
         if (fileUpdated) {

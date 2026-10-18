@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { fetchCliConfig } from '../keyflow-api/cli-config.js';
 
 type DeviceCodeExchangeRequest = {
   baseUrl: string;
@@ -19,16 +20,25 @@ export const createDeviceAuthRequest = () => {
 };
 
 async function fetchFirebaseConfig(baseUrl: string) {
-  const configRes = await fetch(`${baseUrl}/api/cli/config`);
-  if (!configRes.ok) {
+  const config = await fetchCliConfig(baseUrl);
+  if (!config.ok) {
     throw new Error('Failed to retrieve KeyFlow platform configuration');
   }
-
-  const { apiKey } = await configRes.json();
-  if (!apiKey) {
+  if (!config.apiKey) {
     throw new Error('KeyFlow platform configuration is missing apiKey');
   }
-  return { apiKey: apiKey as string };
+  return { apiKey: config.apiKey };
+}
+
+/** Read the UID from a token Firebase just returned over TLS. */
+function uidFromIdToken(idToken: string) {
+  try {
+    const payload = JSON.parse(Buffer.from(idToken.split('.')[1] ?? '', 'base64url').toString('utf8'));
+    const uid = payload.user_id ?? payload.sub;
+    return typeof uid === 'string' && uid ? uid : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function signInWithCustomToken(baseUrl: string, customToken: string) {
@@ -47,23 +57,33 @@ async function signInWithCustomToken(baseUrl: string, customToken: string) {
     throw new Error(tokenData.error?.message || 'Failed to create CLI session');
   }
 
-  // Custom-token sign-in does not guarantee localId/email in its response.
-  // Resolve identity from the ID token through Firebase before saving or uploading.
+  // Custom-token sign-in does not return localId; the UID is the token's own claim.
+  const uid = uidFromIdToken(tokenData.idToken);
+  if (!uid) {
+    throw new Error('Failed to verify CLI account identity');
+  }
+  const expiresInSeconds = Number(tokenData.expiresIn);
+  return {
+    apiKey,
+    idToken: tokenData.idToken as string,
+    uid,
+    expiresAt: Number.isFinite(expiresInSeconds) && expiresInSeconds > 0 ? Date.now() + expiresInSeconds * 1000 : undefined,
+  };
+}
+
+/** Login only: fetch the email to save and confirm the account is enabled. */
+async function lookupAccount(apiKey: string, idToken: string, uid: string) {
   const userRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken: tokenData.idToken }),
+    body: JSON.stringify({ idToken }),
   });
   const userData = await userRes.json().catch(() => ({}));
   const user = userData.users?.[0];
-  if (!userRes.ok || typeof user?.localId !== 'string' || !user.localId || user.disabled) {
+  if (!userRes.ok || user?.localId !== uid || user.disabled) {
     throw new Error('Failed to verify CLI account identity');
   }
-  return {
-    idToken: tokenData.idToken as string,
-    email: (user.email || '') as string,
-    uid: user.localId as string,
-  };
+  return { email: (user.email || '') as string };
 }
 
 export const createDeviceIdToken = async ({
@@ -115,11 +135,12 @@ export const exchangeDeviceCodeForSession = async ({
     baseUrl,
     deviceCredential: exchangeData.deviceCredential as string,
   });
+  const { email } = await lookupAccount(session.apiKey, session.idToken, session.uid);
 
   return {
     deviceCredential: exchangeData.deviceCredential as string,
     tokenType: (exchangeData.tokenType || 'keyflow_device_v1') as string,
-    email: session.email,
+    email,
     uid: session.uid,
     username: session.username,
   };

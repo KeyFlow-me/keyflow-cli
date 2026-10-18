@@ -68,7 +68,7 @@ The secure device auth work replaced direct browser token delivery with one-time
 - Reads a local markdown file.
 - Extracts title from the first Markdown H1 when available.
 - Sends `status: draft` and `visibility: private`.
-- Exchanges the saved local credential for a short-lived ID token immediately before upload.
+- Reuses the ID token from an earlier push while more than five minutes remain; otherwise exchanges the saved local credential for a new one before upload. If the server rejects a reused token with 401, it gets a fresh one and retries once.
 - Requires server response `{ success: true, postId: string }` before reporting success.
 - Prints the draft ID and URL when available.
 - Must fail on empty files, missing files, auth failure, non-OK API responses, or missing `postId`.
@@ -115,7 +115,7 @@ The README must include a reusable prompt for AI agents that:
 ## Safety Requirements
 
 - Never print local credentials, Firebase tokens, device credentials, or refresh tokens.
-- Do not write credentials outside `~/.keyflow/config.json` except for the existing legacy fallback behavior.
+- Do not write credentials outside `~/.keyflow/config.json` except for the existing legacy fallback behavior. Short-lived ID tokens may be cached in `~/.keyflow/id-tokens.json` (user-only permissions), keyed by a hash of server origin and credential; `keyflow logout` deletes it, and credentials from environment variables are never cached.
 - Do not create drafts during automated verification unless the tester explicitly runs the real `push` command.
 - Use `HOME="$(mktemp -d)"` for local manual tests that should not touch the developer's real CLI session.
 

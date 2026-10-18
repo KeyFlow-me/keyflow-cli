@@ -23,6 +23,7 @@ function scenario(body) {
       const a={uid:'uid-a',email:'a@example.test',lastLogin:'fixture',deviceCredential:'fixture-a',username:'taehwandev',baseUrl};
       const b={uid:'uid-b',email:'b@example.test',lastLogin:'fixture',deviceCredential:'fixture-b',username:'moru',baseUrl};
       const calls=[];
+      const jwt=uid=>'h.'+Buffer.from(JSON.stringify({user_id:uid})).toString('base64url')+'.s';
       let current='a'; let username='moru'; let wrongUid=false;
       globalThis.fetch=async(url,init={})=>{
         calls.push({url,init});
@@ -30,11 +31,11 @@ function scenario(body) {
         if(url.endsWith('/exchange'))return json({deviceCredential:'fixture-b'});
         if(url.endsWith('/session')){current=init.headers.Authorization==='Bearer fixture-a'?'a':'b';return json({customToken:'custom-'+current,username});}
         if(url.endsWith('/api/cli/config'))return json({apiKey:'fixture-api-key'});
-        if(url.includes('signInWithCustomToken'))return json({idToken:'id-'+current,refreshToken:'fixture-unused',expiresIn:'3600'});
-        if(url.includes('accounts:lookup'))return json({users:[{localId:wrongUid?'uid-other':'uid-'+current,email:current+'@example.test'}]});
+        if(url.includes('signInWithCustomToken'))return json({idToken:jwt(wrongUid?'uid-other':'uid-'+current),refreshToken:'fixture-unused',expiresIn:'3600'});
+        if(url.includes('accounts:lookup'))return json({users:[{localId:'uid-'+current,email:current+'@example.test'}]});
         if(url.includes('securetoken.googleapis.com'))return json({id_token:'legacy-id',user_id:wrongUid?'uid-other':'uid-a'});
         if(url.endsWith('/api/cli/draft')){
-          assert.equal(init.headers.Authorization,'Bearer id-b');
+          assert.equal(init.headers.Authorization,'Bearer '+jwt('uid-b'));
           return json({success:true,postId:'post-b',url:baseUrl+'/@moru/post/test'});
         }
         throw new Error('Unexpected request: '+url);
@@ -49,12 +50,13 @@ test('named publishing uses the chosen identity despite ambient credentials',()=
   saveConfig(a,'taehwandev');saveConfig(b,'moru');
   process.env.KEYFLOW_DEVICE_CREDENTIAL='ambient-fixture';
   process.env.KEYFLOW_ACCOUNT='taehwandev';
-  assert.equal(await getIdToken(baseUrl,loadConfig('taehwandev'),()=>{}),'id-a');
+  assert.equal(await getIdToken(baseUrl,loadConfig('taehwandev'),()=>{}),jwt('uid-a'));
   const file=path.join(process.cwd(),'moru.md');fs.writeFileSync(file,'# Moru\\nBody');
   process.on('exit',code=>{
     assert.equal(code,0);
     assert.equal(calls.filter(x=>x.url.endsWith('/session')).at(-1).init.headers.Authorization,'Bearer fixture-b');
     assert.equal(calls.filter(x=>x.url.endsWith('/draft')).length,1);
+    assert.equal(calls.some(x=>x.url.includes('accounts:lookup')),false);
     assert.match(fs.readFileSync(file,'utf8'),/id: post-b/);
   });
   await pushCommand(file,{account:'moru',json:true});
