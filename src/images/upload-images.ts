@@ -1,5 +1,5 @@
-import fs from 'fs';
 import { KeyflowError } from '../keyflow-api/keyflow-error.js';
+import { keyflowFetch } from '../keyflow-api/keyflow-fetch.js';
 import { readKeyflowError } from '../keyflow-api/read-keyflow-error.js';
 import { imageKey } from './image-key.js';
 import type { LocalImage } from './local-image.js';
@@ -49,7 +49,9 @@ export async function uploadImages(
     const put = await fetchImpl(slot.uploadUrl, {
       method: 'PUT',
       headers: { 'Content-Type': image.contentType, 'Content-Length': String(image.size) },
-      body: fs.readFileSync(image.absolutePath),
+      // The bytes that were hashed and checked are the bytes that are sent.
+      body: new Uint8Array(image.bytes),
+      redirect: 'error',
     });
     if (!put.ok) throw new Error(`Uploading ${image.raw} failed (HTTP ${put.status}).`);
     uploaded += 1;
@@ -70,14 +72,14 @@ async function requestSlots(
   images: PreparedImage[],
   fetchImpl: typeof fetch,
 ): Promise<Map<string, UploadSlot>> {
-  const response = await fetchImpl(`${baseUrl}/api/cli/images`, {
+  const response = await keyflowFetch(baseUrl, '/api/cli/images', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
     body: JSON.stringify({
       visibility,
       images: images.map((image) => ({ sha256: image.sha256, size: image.size, contentType: image.contentType, usage: image.usage })),
     }),
-  });
+  }, fetchImpl);
 
   if (response.status === 404) {
     throw new KeyflowError(

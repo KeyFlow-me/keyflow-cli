@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { fetchCliConfig } from '../keyflow-api/cli-config.js';
+import { keyflowFetch } from '../keyflow-api/keyflow-fetch.js';
 
 type DeviceCodeExchangeRequest = {
   baseUrl: string;
@@ -43,8 +44,9 @@ function uidFromIdToken(idToken: string) {
 
 async function signInWithCustomToken(baseUrl: string, customToken: string) {
   const { apiKey } = await fetchFirebaseConfig(baseUrl);
-  const tokenRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`, {
+  const tokenRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
+    redirect: 'error',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       token: customToken,
@@ -73,8 +75,9 @@ async function signInWithCustomToken(baseUrl: string, customToken: string) {
 
 /** Login only: fetch the email to save and confirm the account is enabled. */
 async function lookupAccount(apiKey: string, idToken: string, uid: string) {
-  const userRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+  const userRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
+    redirect: 'error',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken }),
   });
@@ -90,7 +93,7 @@ export const createDeviceIdToken = async ({
   baseUrl,
   deviceCredential,
 }: DeviceSessionRequest) => {
-  const sessionRes = await fetch(`${baseUrl}/api/auth/device/session`, {
+  const sessionRes = await keyflowFetch(baseUrl, '/api/auth/device/session', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${deviceCredential}`,
@@ -116,7 +119,7 @@ export const exchangeDeviceCodeForSession = async ({
   code,
   codeVerifier,
 }: DeviceCodeExchangeRequest) => {
-  const exchangeRes = await fetch(`${baseUrl}/api/auth/device/exchange`, {
+  const exchangeRes = await keyflowFetch(baseUrl, '/api/auth/device/exchange', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

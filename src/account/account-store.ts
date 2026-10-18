@@ -9,7 +9,8 @@ import { PrivateFile } from './private-file.js';
 const directory = PrivateFile.directory();
 const configPath = path.join(directory, 'config.json');
 const accountsPath = path.join(directory, 'accounts.json');
-const legacyPath = path.join(process.cwd(), '.keyflow_session.json');
+// Sessions are read only from ~/.keyflow. A `.keyflow_session.json` in the working directory is
+// never trusted: any repository could ship one and redirect posts to another account.
 type Registry = { schemaVersion: 1; accounts: Record<string, CLIConfig> };
 
 function validSession(value: unknown): value is CLIConfig {
@@ -24,11 +25,9 @@ function readJson(file: string): unknown {
   catch { throw new Error(`Invalid KeyFlow session storage: ${path.basename(file)}. Repair or remove it explicitly.`); }
 }
 function flat(): CLIConfig | null {
-  const file = fs.existsSync(configPath) ? configPath : fs.existsSync(legacyPath) ? legacyPath : null;
-  if (!file) return null;
-  const value = readJson(file);
-  if (!validSession(value)) throw new Error(`Invalid KeyFlow session storage: ${path.basename(file)}.`);
-  if (file === legacyPath) console.warn('Warning: using legacy KeyFlow session file. Run "keyflow login" to migrate.');
+  if (!fs.existsSync(configPath)) return null;
+  const value = readJson(configPath);
+  if (!validSession(value)) throw new Error(`Invalid KeyFlow session storage: ${path.basename(configPath)}.`);
   return value;
 }
 function registry(): Registry {
@@ -102,7 +101,6 @@ export const AccountStore = {
     put(data, name, config);
     atomic(accountsPath, data);
     atomic(configPath, { ...config, accountName: name });
-    remove(legacyPath);
   },
   list() {
     const data = registry();
@@ -122,7 +120,6 @@ export const AccountStore = {
     if (!target) throw new Error(`Unknown account "${name}". Run "keyflow account list".`);
     atomic(accountsPath, data);
     atomic(configPath, { ...entry(data, name)!, accountName: name });
-    remove(legacyPath);
   },
   saveCurrent(name: string) {
     nameOf(name);
@@ -133,7 +130,7 @@ export const AccountStore = {
   clear(account?: string, all = false) {
     // A cached ID token must not outlive the connection that minted it.
     IdTokenCache.clear();
-    if (all) { remove(accountsPath); remove(configPath); remove(legacyPath); return; }
+    if (all) { remove(accountsPath); remove(configPath); return; }
     const data = registry();
     const current = flat();
     const selection = selected(account);
@@ -143,6 +140,6 @@ export const AccountStore = {
     const name = selection ?? active;
     if (name) delete data.accounts[name];
     atomic(accountsPath, data);
-    if (!selection || selection === active) { remove(configPath); remove(legacyPath); }
+    if (!selection || selection === active) remove(configPath);
   },
 };

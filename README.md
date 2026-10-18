@@ -166,6 +166,7 @@ For Korean/English editions, push the Korean file first, then add `translation_o
 #### Images
 
 - Use local paths in normal Markdown images, relative to the markdown file (for example an image at `images/diagram.png` next to `post.md`). A local `cover` works the same way.
+- Only real image files inside the markdown file's folder (or its subfolders) are uploaded. Symbolic links, paths that resolve outside that folder (`../`, absolute paths, linked folders), and files whose content does not match their extension are rejected by `check` and `push`. `push` lists every local file it will upload before sending anything.
 - Images inside code blocks and inline code are left alone. `https://` images are left as they are.
 - PNG, JPEG, WebP, and GIF only. At most 10MB per image and 50 images per push. SVG is not accepted.
 - The CLI hashes each image, asks KeyFlow which ones already exist, uploads only the missing ones, and replaces the paths in the uploaded copy. Your file keeps its local paths, so re-pushing does not upload the same image again.
@@ -267,9 +268,23 @@ When a command needs authentication, the CLI checks credentials in this order:
 1. `KEYFLOW_DEVICE_CREDENTIAL` environment variable.
 2. `KEYFLOW_REFRESH_TOKEN` environment variable, legacy fallback only.
 3. `~/.keyflow/config.json` from `keyflow login`.
-4. Legacy `./.keyflow_session.json` fallback for older local installs.
 
 Use `KEYFLOW_DEVICE_CREDENTIAL` only in controlled CI or agent environments. For normal local use, run `keyflow login`.
+
+The CLI never reads files from the working directory to decide who you are or where to send credentials. It does not load `.env`, and it ignores a `./.keyflow_session.json` left by very old versions (run `keyflow login` once to replace it).
+
+### Server
+
+Each saved account is bound to the server it logged in to, and its credentials are sent only there. The default is `https://www.keyflow.me`; accounts saved before the server was recorded and credentials from environment variables always use it. Requests never follow redirects.
+
+To use another KeyFlow server, log in to it explicitly. Only `https` is accepted; plain `http` is allowed for a local development server with an extra flag:
+
+```bash
+keyflow login --server https://staging.example.com --account staging
+keyflow login --server http://localhost:3000 --allow-insecure-localhost --account local
+```
+
+`NEXT_PUBLIC_BASE_URL` no longer changes the server.
 
 ### Recommended AI Agent Prompt
 

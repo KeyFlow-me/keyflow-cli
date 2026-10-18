@@ -1,5 +1,5 @@
-import fs from 'fs';
 import { KeyflowError } from '../keyflow-api/keyflow-error.js';
+import { keyflowFetch } from '../keyflow-api/keyflow-fetch.js';
 import { readKeyflowError } from '../keyflow-api/read-keyflow-error.js';
 import { imageKey } from './image-key.js';
 import { prepareImage } from './prepare-image.js';
@@ -32,7 +32,9 @@ export async function uploadImages(baseUrl, idToken, visibility, images, fetchIm
         const put = await fetchImpl(slot.uploadUrl, {
             method: 'PUT',
             headers: { 'Content-Type': image.contentType, 'Content-Length': String(image.size) },
-            body: fs.readFileSync(image.absolutePath),
+            // The bytes that were hashed and checked are the bytes that are sent.
+            body: new Uint8Array(image.bytes),
+            redirect: 'error',
         });
         if (!put.ok)
             throw new Error(`Uploading ${image.raw} failed (HTTP ${put.status}).`);
@@ -47,14 +49,14 @@ export async function uploadImages(baseUrl, idToken, visibility, images, fetchIm
 }
 /** POST /api/cli/images and index the returned slots by `${usage}:${sha256}`. */
 async function requestSlots(baseUrl, idToken, visibility, images, fetchImpl) {
-    const response = await fetchImpl(`${baseUrl}/api/cli/images`, {
+    const response = await keyflowFetch(baseUrl, '/api/cli/images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
             visibility,
             images: images.map((image) => ({ sha256: image.sha256, size: image.size, contentType: image.contentType, usage: image.usage })),
         }),
-    });
+    }, fetchImpl);
     if (response.status === 404) {
         throw new KeyflowError('This KeyFlow server does not support image upload yet.', 404, 'images-not-supported', 'Remove local images or use https:// image URLs, then push again. Nothing was saved.');
     }

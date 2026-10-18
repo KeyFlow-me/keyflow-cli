@@ -73,7 +73,7 @@ All fields are optional. No frontmatter behaves like the previous CLI: the first
 ## 5. Images
 
 1. Collect local image references from the body (standard Markdown image syntax, with an optional title or an angle-bracket path), skipping fenced code blocks and inline code, plus a local `cover`. Remote (`https:`, `data:`, `//`) targets are ignored.
-2. Resolve paths relative to the markdown file (URI-decoded when needed).
+2. Resolve paths relative to the markdown file (URI-decoded when needed). Only a regular file whose real path is inside the markdown file's folder may be uploaded: symbolic links (`image-symlink`), paths that resolve outside the folder (`image-outside-folder`), and content that does not match the extension's PNG/JPEG/WebP/GIF signature (`image-content-mismatch`) are errors. Upload re-checks each file and sends the same bytes it hashed. `push` lists the files before sending.
 3. Allow PNG, JPEG, WebP, GIF by extension; at most 10MB each and 50 per push (unique files per usage).
 4. Compute SHA-256 per file and `POST /api/cli/images` with `{ visibility, images: [{ sha256, size, contentType, usage }] }`, deduplicated by hash and usage.
 5. `PUT` only entries whose `uploadUrl` is non-null, with exactly the declared `Content-Type` and `Content-Length`.

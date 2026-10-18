@@ -2,13 +2,23 @@ import chalk from 'chalk';
 import { createDeviceAuthRequest } from '../auth/device-auth.js';
 import { createCallbackServer } from '../auth/local-callback-server.js';
 import { openBrowser } from '../auth/open-browser.js';
+import { KeyflowServer } from '../keyflow-api/keyflow-server.js';
 import { printCatLogo } from '../lib/logo.js';
 
 const AUTH_CALLBACK_PORT = 4242;
 
-export const loginCommand = async (options: { account?: string } = {}) => {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.keyflow.me';
-  const allowedOrigin = new URL(baseUrl).origin;
+type LoginOptions = { account?: string; server?: string; allowInsecureLocalhost?: boolean };
+
+export const loginCommand = async (options: LoginOptions = {}) => {
+  let baseUrl: string;
+  try {
+    baseUrl = KeyflowServer.parse(options.server ?? KeyflowServer.DEFAULT_ORIGIN, { allowInsecureLocalhost: options.allowInsecureLocalhost });
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : 'Invalid KeyFlow server.');
+    process.exitCode = 1;
+    return;
+  }
+  const allowedOrigin = baseUrl;
   const authRequest = createDeviceAuthRequest();
   const account = options.account ?? process.env.KEYFLOW_ACCOUNT;
   if (account !== undefined && !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$/.test(account)) {
@@ -23,6 +33,7 @@ export const loginCommand = async (options: { account?: string } = {}) => {
   if (account) authUrl.searchParams.set('username', account);
 
   printCatLogo();
+  if (baseUrl !== KeyflowServer.DEFAULT_ORIGIN) console.log(chalk.yellow(`Server: ${baseUrl} (not the default KeyFlow server)`));
   console.log(chalk.gray('Opening your browser for one-time KeyFlow authentication...'));
 
   const server = createCallbackServer({

@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { fetchCliConfig } from '../keyflow-api/cli-config.js';
+import { keyflowFetch } from '../keyflow-api/keyflow-fetch.js';
 export const createDeviceAuthRequest = () => {
     const state = crypto.randomUUID();
     const codeVerifier = crypto.randomBytes(32).toString('base64url');
@@ -29,8 +30,9 @@ function uidFromIdToken(idToken) {
 }
 async function signInWithCustomToken(baseUrl, customToken) {
     const { apiKey } = await fetchFirebaseConfig(baseUrl);
-    const tokenRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`, {
+    const tokenRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST',
+        redirect: 'error',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             token: customToken,
@@ -56,8 +58,9 @@ async function signInWithCustomToken(baseUrl, customToken) {
 }
 /** Login only: fetch the email to save and confirm the account is enabled. */
 async function lookupAccount(apiKey, idToken, uid) {
-    const userRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+    const userRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST',
+        redirect: 'error',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
     });
@@ -69,7 +72,7 @@ async function lookupAccount(apiKey, idToken, uid) {
     return { email: (user.email || '') };
 }
 export const createDeviceIdToken = async ({ baseUrl, deviceCredential, }) => {
-    const sessionRes = await fetch(`${baseUrl}/api/auth/device/session`, {
+    const sessionRes = await keyflowFetch(baseUrl, '/api/auth/device/session', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${deviceCredential}`,
@@ -88,7 +91,7 @@ export const createDeviceIdToken = async ({ baseUrl, deviceCredential, }) => {
     };
 };
 export const exchangeDeviceCodeForSession = async ({ baseUrl, code, codeVerifier, }) => {
-    const exchangeRes = await fetch(`${baseUrl}/api/auth/device/exchange`, {
+    const exchangeRes = await keyflowFetch(baseUrl, '/api/auth/device/exchange', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

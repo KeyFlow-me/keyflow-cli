@@ -1,13 +1,17 @@
 import fs from 'fs';
 import { imageContentType } from '../images/image-content-type.js';
+import { ImageFileGuard } from '../images/image-file-guard.js';
 import { IMAGE_LIMITS } from '../images/image-limits.js';
 import type { LocalImage } from '../images/local-image.js';
 import type { CheckItem } from './check-item.js';
 
-/** Return the problem with a local image (missing, unsupported type, too large), or null. */
+/** Return the problem with a local image (missing, linked or outside the post folder, wrong type or content, too large), or null. */
 export function findImageProblem(image: LocalImage): CheckItem | null {
   const label = image.usage === 'cover' ? 'Cover image' : 'Image';
-  if (!fs.existsSync(image.absolutePath) || !fs.statSync(image.absolutePath).isFile()) {
+  const exists = fs.existsSync(image.absolutePath);
+  const placement = exists || isDanglingLink(image.absolutePath) ? ImageFileGuard.placementProblem(image) : null;
+  if (placement) return { ...placement, line: image.line, severity: 'error' };
+  if (!exists || !fs.statSync(image.absolutePath).isFile()) {
     return {
       code: 'missing-image',
       line: image.line,
@@ -35,5 +39,22 @@ export function findImageProblem(image: LocalImage): CheckItem | null {
       severity: 'error',
     };
   }
+  const mismatch = ImageFileGuard.contentProblem(image, readHead(image.absolutePath));
+  if (mismatch) return { ...mismatch, line: image.line, severity: 'error' };
   return null;
+}
+
+function isDanglingLink(file: string) {
+  try { return fs.lstatSync(file).isSymbolicLink(); } catch { return false; }
+}
+
+/** The first bytes are enough to recognise every supported image format. */
+function readHead(file: string): Buffer {
+  const fd = fs.openSync(file, 'r');
+  try {
+    const head = Buffer.alloc(16);
+    return head.subarray(0, fs.readSync(fd, head, 0, head.length, 0));
+  } finally {
+    fs.closeSync(fd);
+  }
 }

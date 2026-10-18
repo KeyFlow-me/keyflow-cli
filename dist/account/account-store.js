@@ -7,7 +7,6 @@ import { PrivateFile } from './private-file.js';
 const directory = PrivateFile.directory();
 const configPath = path.join(directory, 'config.json');
 const accountsPath = path.join(directory, 'accounts.json');
-const legacyPath = path.join(process.cwd(), '.keyflow_session.json');
 function validSession(value) {
     if (!value || typeof value !== 'object')
         return false;
@@ -25,14 +24,11 @@ function readJson(file) {
     }
 }
 function flat() {
-    const file = fs.existsSync(configPath) ? configPath : fs.existsSync(legacyPath) ? legacyPath : null;
-    if (!file)
+    if (!fs.existsSync(configPath))
         return null;
-    const value = readJson(file);
+    const value = readJson(configPath);
     if (!validSession(value))
-        throw new Error(`Invalid KeyFlow session storage: ${path.basename(file)}.`);
-    if (file === legacyPath)
-        console.warn('Warning: using legacy KeyFlow session file. Run "keyflow login" to migrate.');
+        throw new Error(`Invalid KeyFlow session storage: ${path.basename(configPath)}.`);
     return value;
 }
 function registry() {
@@ -114,7 +110,6 @@ export const AccountStore = {
         put(data, name, config);
         atomic(accountsPath, data);
         atomic(configPath, { ...config, accountName: name });
-        remove(legacyPath);
     },
     list() {
         const data = registry();
@@ -136,7 +131,6 @@ export const AccountStore = {
             throw new Error(`Unknown account "${name}". Run "keyflow account list".`);
         atomic(accountsPath, data);
         atomic(configPath, { ...entry(data, name), accountName: name });
-        remove(legacyPath);
     },
     saveCurrent(name) {
         nameOf(name);
@@ -151,7 +145,6 @@ export const AccountStore = {
         if (all) {
             remove(accountsPath);
             remove(configPath);
-            remove(legacyPath);
             return;
         }
         const data = registry();
@@ -165,9 +158,7 @@ export const AccountStore = {
         if (name)
             delete data.accounts[name];
         atomic(accountsPath, data);
-        if (!selection || selection === active) {
+        if (!selection || selection === active)
             remove(configPath);
-            remove(legacyPath);
-        }
     },
 };

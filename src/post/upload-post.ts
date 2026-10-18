@@ -1,10 +1,11 @@
+import { keyflowFetch } from '../keyflow-api/keyflow-fetch.js';
 import { KeyflowError } from '../keyflow-api/keyflow-error.js';
 import { readKeyflowError } from '../keyflow-api/read-keyflow-error.js';
 import type { ResolvedPost } from './resolve-post.js';
 
 /** Verify save and schedule separately; a failed reservation must retain the saved draft ID. */
 export async function uploadPost(baseUrl: string, idToken: string, post: ResolvedPost, content: string, coverImage?: string) {
-  const response = await fetch(`${baseUrl}/api/cli/draft`, {
+  const response = await keyflowFetch(baseUrl, '/api/cli/draft', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
     body: JSON.stringify({ title: post.title, content, status: post.status, visibility: post.visibility,
