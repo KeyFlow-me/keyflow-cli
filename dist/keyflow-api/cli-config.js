@@ -1,8 +1,8 @@
 import { keyflowFetch } from './keyflow-fetch.js';
 const requests = new Map();
 /**
- * `GET /api/cli/config` once per server and process. Token exchange and the scheduling
- * check share the same public response, so one push never asks for it twice.
+ * `GET /api/cli/config` once per server and process. Token exchange, scheduling and
+ * HTML capability checks share this public response instead of fetching it twice.
  */
 export function fetchCliConfig(baseUrl) {
     const origin = new URL(baseUrl).origin;
@@ -24,5 +24,6 @@ async function load(baseUrl) {
         status: response.status,
         apiKey: typeof body?.apiKey === 'string' && body.apiKey ? body.apiKey : undefined,
         scheduledPublishing: body?.capabilities?.scheduledPublishing === true,
+        htmlArtifacts: body?.capabilities?.htmlArtifacts === true,
     };
 }

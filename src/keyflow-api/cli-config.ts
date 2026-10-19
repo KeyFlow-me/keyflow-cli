@@ -5,13 +5,14 @@ export type CliConfigResult = {
   status: number;
   apiKey?: string;
   scheduledPublishing: boolean;
+  htmlArtifacts: boolean;
 };
 
 const requests = new Map<string, Promise<CliConfigResult>>();
 
 /**
- * `GET /api/cli/config` once per server and process. Token exchange and the scheduling
- * check share the same public response, so one push never asks for it twice.
+ * `GET /api/cli/config` once per server and process. Token exchange, scheduling and
+ * HTML capability checks share this public response instead of fetching it twice.
  */
 export function fetchCliConfig(baseUrl: string): Promise<CliConfigResult> {
   const origin = new URL(baseUrl).origin;
@@ -27,11 +28,12 @@ export function fetchCliConfig(baseUrl: string): Promise<CliConfigResult> {
 
 async function load(baseUrl: string): Promise<CliConfigResult> {
   const response = await keyflowFetch(new URL(baseUrl).origin, '/api/cli/config');
-  const body = await response.json().catch(() => null) as { apiKey?: unknown; capabilities?: { scheduledPublishing?: unknown } } | null;
+  const body = await response.json().catch(() => null) as { apiKey?: unknown; capabilities?: { scheduledPublishing?: unknown; htmlArtifacts?: unknown } } | null;
   return {
     ok: response.ok,
     status: response.status,
     apiKey: typeof body?.apiKey === 'string' && body.apiKey ? body.apiKey : undefined,
     scheduledPublishing: body?.capabilities?.scheduledPublishing === true,
+    htmlArtifacts: body?.capabilities?.htmlArtifacts === true,
   };
 }
