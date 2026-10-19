@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
 import { pushCommand } from './commands/push.js';
+import { HtmlCommands } from './commands/html.js';
 import { statusCommand } from './commands/status.js';
 import { AccountCommands } from './commands/account.js';
 import { updateCommand } from './commands/update.js';
@@ -73,6 +74,26 @@ program
     .option('--json', 'Print a machine-readable result')
     .option('--account <name>', 'Upload using only this saved account')
     .action(pushCommand);
+const html = program.command('html').description('Save self-contained HTML as a native post or standalone link');
+html.command('push <file>')
+    .description('Upload one UTF-8 HTML file (new HTML defaults to a draft post)')
+    .option('--title <text>', 'Title (required for new HTML)')
+    .option('--description <text>', 'Short description')
+    .option('--id <id>', 'Update this existing HTML artifact; omitted metadata is retained')
+    .option('--publish', 'Publish this HTML')
+    .option('--draft', 'Save this HTML as a draft')
+    .option('--as <type>', 'Create a post or link (post by default)')
+    .option('--language <locale>', 'HTML language: ko or en')
+    .option('--folder <id>', 'Workspace folder ID (new HTML only)')
+    .option('--dry-run', 'Validate locally without authentication or network requests')
+    .option('--json', 'Print a machine-readable result without HTML source')
+    .option('--account <name>', 'Use only this saved account')
+    .action(HtmlCommands.push);
+html.command('list')
+    .description('List up to 50 HTML artifacts for the selected account')
+    .option('--json', 'Print safe metadata as JSON')
+    .option('--account <name>', 'Use only this saved account')
+    .action(HtmlCommands.list);
 program
     .command('check')
     .description('Check a markdown file offline before pushing')

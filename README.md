@@ -1,7 +1,7 @@
 # KeyFlow CLI ⚡️
 
 The official command-line interface for **KeyFlow Editorial Studio**.  
-Push markdown drafts directly from your terminal—or let your AI agents do it for you—straight to your KeyFlow workspace.
+Push Markdown drafts or self-contained HTML results directly from your terminal—or let your AI agents do it for you—straight to your KeyFlow workspace.
 
 ![npm](https://img.shields.io/npm/v/@keyflow-blog/cli?color=emerald)
 ![License](https://img.shields.io/npm/l/@keyflow-blog/cli)
@@ -11,6 +11,7 @@ Push markdown drafts directly from your terminal—or let your AI agents do it f
 - **Settings live in the file**: title, tags, visibility, cover, and summary go in optional YAML frontmatter. Without frontmatter, the first `# H1` is the title.
 - **Local images just work**: Markdown images with local paths and a local `cover` are uploaded and linked. Your file keeps its local paths.
 - **Same file, same post**: after the first push the CLI remembers the post ID in the file, so the next push updates it.
+- **HTML results**: `keyflow html push report.html --title "Report"` saves an HTML post draft. Choose `--as link` for a standalone page, and use the returned ID for later updates without changing your source file.
 - **Built for AI agents**: `keyflow guide`, `keyflow check --json`, `push --json`, and `keyflow agent setup` let any agent (Claude Code, Codex, AGY, Gemini CLI, Cursor, ...) post correctly without guessing.
 - **Browser Authentication**: Secure one-time browser approval. The browser sends only a short-lived one-time code to the local callback.
 - **Account Controls**: Log in, log out, inspect local session status, and verify the installed CLI version.
@@ -187,7 +188,63 @@ keyflow push post.md --json      # machine-readable result: {ok, postId, url, st
 
 Server errors are shown with their hint when KeyFlow provides one (`{error, code, hint}`).
 
-### 5. Version and Updates
+### 5. Upload an HTML Result
+
+Use one self-contained UTF-8 `.html` or `.htm` file, at most **1 MiB** including
+embedded images. HTML uses its own commands; normal `keyflow push post.md` keeps
+the Markdown workflow above.
+
+```bash
+# Validate locally: no login or network request
+keyflow html push report.html --title "Report" --language en --dry-run --json
+
+# Save a post draft under the selected account
+keyflow html push report.html --title "Report" --language en --account moru --json
+
+# Create a public standalone page after approval
+keyflow html push report.html --title "Report" --as link --publish --account moru --json
+
+# Inspect saved results, then update one by its returned ID
+keyflow html list --account moru --json
+keyflow html push report.html --id ARTIFACT_ID --account moru --json
+```
+
+New uploads default to `--as post` and draft access limited to the owner. Add
+`--publish` only when publication is intended; `--draft` explicitly saves a draft.
+A new upload requires `--title` (up to 120 characters); `--description` is optional
+(up to 500 characters). Use `--language ko` or `--language en` for the edition.
+`--folder ID` can place a new post in a workspace folder; it is create-only.
+
+HTML posts use the existing post reader and workspace library. Standalone links
+open as full-viewport pages and stay out of the feed and profile post list. A draft
+link is not a public share link. Use the Web editor for cover images, tags,
+Korean/English edition linking, custom slugs, and advanced publishing settings.
+The CLI has no HTML translation, cover, custom-slug, or deletion flags.
+
+Save the returned artifact ID: HTML files never receive a `keyflow:` block or any
+other rewrite. `--id` fetches the current version before saving and preserves
+omitted title, description, status, publication mode, and language. Publication
+mode cannot change between post and link. A version conflict stops the command;
+inspect the current result before trying again. The CLI never automatically
+retries a conflicting update.
+
+Keep CSS and JavaScript inline, and embed images and fonts as data URLs in the
+file. External CDN assets, API calls, local relative files, browser storage,
+forms, and scripted popups are unsupported in the sandbox. A real user click on
+an HTTP(S) link opens a safe new tab; `#fragment` links scroll inside the result.
+The CLI does not gather or upload adjacent asset files.
+
+Before uploading, the CLI requires `capabilities.htmlArtifacts: true` from the
+selected server. Older servers fail safely without an upload. Listing retrieves
+metadata, not HTML source, and shows the current linked post state. Trashed posts
+are hidden; a missing linked post is marked as orphaned. Use **My HTML results**
+in the Web workspace to delete: linked posts go to Trash, while standalone links
+and orphaned results can be permanently deleted after confirmation.
+
+See [HTML upload contract and verification](./docs/html-artifacts.md) for the API
+workflow, supported scope, and release checks.
+
+### 6. Version and Updates
 Show the installed CLI version:
 
 ```bash
@@ -216,10 +273,10 @@ keyflow update --yes
 Most people just tell their agent "post this to KeyFlow" (키플로우에 올려줘). The CLI itself is the shared entry point, so this works the same in Claude Code, Codex, AGY (Antigravity), Gemini CLI, Cursor, or any agent that can run shell commands:
 
 1. `keyflow --help` — the first line tells agents to run `keyflow guide` first.
-2. `keyflow guide` — prints one short Markdown guide: upload steps, frontmatter, KeyFlow syntax (callouts, math, code, Mermaid, link and document cards, Sandpack), common mistakes, and safety rules.
-3. The agent writes the markdown file.
-4. `keyflow check post.md --json` — the agent fixes every error.
-5. After the human approves, `keyflow push post.md --json`.
+2. `keyflow guide` — prints one short Markdown guide: Markdown and HTML upload steps, frontmatter, KeyFlow syntax (callouts, math, code, Mermaid, link and document cards, Sandpack), common mistakes, and safety rules.
+3. The agent writes the Markdown file or a self-contained HTML file.
+4. For Markdown, run `keyflow check post.md --json` and fix every error. For HTML, run `keyflow html push report.html --title "Report" --dry-run --json`.
+5. After the human approves, run `keyflow push post.md --json` or `keyflow html push report.html --title "Report" --account NAME --json`. Publishing requires explicit approval and `--publish`.
 
 `keyflow guide` downloads the latest guide from KeyFlow (`GET /api/cli/guide`) and caches it in `~/.keyflow/guide.md` with its version in `~/.keyflow/guide.version`. Offline, it prints the cached copy, or a bundled copy when there is no cache. Status notes go to stderr, so stdout is pure Markdown. The same guide is available at `https://www.keyflow.me/tools/cli/guide.md` for agents that can only read URLs.
 
@@ -291,17 +348,20 @@ keyflow login --server http://localhost:3000 --allow-insecure-localhost --accoun
 If you prefer a prompt over `keyflow agent setup`, use this:
 
 ```text
-You are preparing a KeyFlow post with the KeyFlow CLI.
+You are preparing KeyFlow content with the KeyFlow CLI.
 
 Rules:
 - Run `keyflow guide` first and follow it.
 - Never ask for, print, log, or store KeyFlow credentials, Firebase tokens, device credentials, refresh tokens, or `.env` values.
 - Use an existing authenticated local CLI session when available.
 - If authentication is missing, ask the human to run `keyflow login` locally or provide `KEYFLOW_DEVICE_CREDENTIAL` through their own secret manager. Do not request the credential in chat.
-- Run `keyflow check <file> --json` and fix every error.
-- Only run `keyflow push <file>` after the human has approved it. Get explicit approval before `publish: true` or `--publish`.
-- Do not claim the post is published unless `keyflow push` reported it.
-- Report the resulting post ID and URL.
+- Select the intended local account explicitly with `--account NAME` when multiple accounts are connected.
+- For Markdown, run `keyflow check <file> --json` and fix every error before `keyflow push <file>`.
+- For HTML, use one self-contained UTF-8 file up to 1 MiB. Run `keyflow html push <file> --title "Title" --dry-run --json` first; `keyflow check` is for Markdown.
+- Only upload after the human has approved it. Get explicit approval before `publish: true` or `--publish`.
+- For HTML updates use the returned artifact ID with `--id`; never automatically retry a version conflict.
+- Do not claim publication unless the corresponding push result confirms it.
+- Report the resulting post or artifact ID and URL, without credentials or raw HTML source.
 ```
 
 For non-interactive agent runs, keep `KEYFLOW_DEVICE_CREDENTIAL` in the runner's secret store and inject it only for the command that needs it:

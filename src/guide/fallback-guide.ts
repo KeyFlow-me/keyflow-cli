@@ -6,7 +6,7 @@ export const FALLBACK_GUIDE = `# KeyFlow CLI guide for AI agents (offline copy)
 
 This is the copy bundled with the CLI. Run \`keyflow guide\` again when online for the latest rules.
 
-## Upload order
+## Markdown upload order
 
 1. Write or edit the markdown file.
 2. Run \`keyflow check <file> --json\` and fix every error.
@@ -16,6 +16,41 @@ This is the copy bundled with the CLI. Run \`keyflow guide\` again when online f
 Never ask for, print, log, or store KeyFlow credentials, tokens, or \`.env\` values.
 If the CLI is not logged in, ask the human to run \`keyflow login\` themselves.
 Get explicit human approval before publishing publicly (\`publish: true\` or \`--publish\`).
+
+## HTML results
+
+Use the separate HTML commands for a report, demo, or other self-contained result:
+
+\`\`\`bash
+keyflow html push report.html --title "Report" --language en --dry-run --json
+keyflow html push report.html --title "Report" --language en --account NAME --json
+keyflow html push report.html --title "Report" --as link --publish --account NAME --json
+keyflow html list --account NAME --json
+keyflow html push report.html --id ARTIFACT_ID --account NAME --json
+\`\`\`
+
+- Upload only after human approval; publishing additionally requires explicit approval and \`--publish\`.
+  A new result defaults to a post with owner-only draft access. \`--draft\` explicitly saves a draft;
+  do not combine it with \`--publish\`. An unpublished link is not a public share link.
+- Use one nonempty UTF-8 \`.html\` or \`.htm\` file, at most 1 MiB including embedded assets.
+  Keep CSS/JavaScript inline and embed images/fonts as data URLs in the isolated sandbox. External CDN assets, API calls,
+  local relative files, browser storage, forms, and scripted popups are unsupported. Real user clicks
+  on HTTP(S) links open safe new tabs; \`#fragment\` links scroll within the result.
+- A new upload requires \`--title\` (at most 120 characters); \`--description\` is optional (at most 500).
+  Choose \`--as post|link\` and optionally \`--language ko|en\`. \`--folder ID\` is create-only.
+  Posts use the existing reader/library; standalone links are full-viewport pages outside feed/profile lists.
+- \`--dry-run\` needs no login, makes no network request, and never rewrites the source file.
+  Use it instead of \`keyflow check\` for HTML. HTML pushes never add frontmatter or saved IDs to the file.
+- Retain the returned artifact ID for \`--id\` updates. The CLI reads the current version first and preserves
+  omitted title, description, status, publication mode, and language. Mode conversion is forbidden.
+  A version conflict stops without an automatic retry; inspect the current result before retrying.
+- The selected server must advertise \`capabilities.htmlArtifacts: true\` before upload; old servers fail safely.
+  \`html list\` fetches metadata, not source, uses current linked post state, hides Trash, and marks orphaned results.
+- Use the Web editor for cover images, tags, custom slugs, bilingual edition linking, and advanced publishing.
+  No HTML CLI delete command exists. Web's My HTML results list moves linked posts to Trash;
+  deleting standalone links or orphaned results requires permanent-deletion confirmation.
+- Keep account selection explicit when needed. Report IDs/URLs and confirmed state; never print credentials,
+  storage keys, or raw source HTML in command results. Normal Markdown publishing stays unchanged.
 
 ## Frontmatter (all optional)
 
