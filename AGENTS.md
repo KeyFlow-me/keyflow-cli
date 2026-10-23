@@ -172,3 +172,10 @@ checkout for reusable workflow, safety, review, and platform guidance.
 - Keep code identifiers, paths, commands, API names, environment variables, package names, and external proper nouns literal.
 - Sibling repository rules differ: `../KeyFlow` Web docs are Korean-only, and `../keyflow-desktop` docs are Korean-only.
 - Cross-repo documentation structure and the README/AGENTS roles are tracked in `../KeyFlow/specifications/documentation_structure.md`.
+
+## Node.js Toolchain
+
+- Use the patched development runtime in `.nvmrc` (Node.js 24.22.1).
+- Supported runtimes are `^22.23.4 || ^24.22.1 || ^26.12.1`; preserve the separate security floor for each supported major in `package.json` and the root `package-lock.json` entry.
+- Keep repository `engine-strict` enabled. Do not bypass an engine error with `--force`; select a supported runtime instead.
+- Verify changes with `npm ci`, `npm test`, and `npm run build`. Do not change the package version or publish to npm as part of a runtime-policy patch.
