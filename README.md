@@ -37,7 +37,23 @@ Install the package globally via npm:
 npm install -g @keyflow-blog/cli
 ```
 
-*(Requires Node.js 18 or higher)*
+Requires Node.js **22.23.4+**, **24.22.1+**, or **26.12.1+** within those major
+versions. Earlier patches and unsupported major versions are not supported.
+These minimums include the [October 2026 Node.js security fixes](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases).
+
+For development, `.nvmrc` selects Node.js **24.22.1**:
+
+```bash
+nvm install
+nvm use
+npm ci
+npm test
+npm run build
+```
+
+The repository enables `engine-strict` so npm rejects unsupported Node.js versions
+during dependency installation. Global npm installs use the consumer's npm
+configuration; check `node --version` before installing or updating the CLI.
 
 This release retains the existing CLI package version format `YYYY.M.D`
 (release date in Asia/Seoul), for example `2026.10.16`. Published versions are
