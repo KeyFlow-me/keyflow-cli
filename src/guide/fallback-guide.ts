@@ -36,6 +36,10 @@ keyflow html push report.html --id ARTIFACT_ID --account NAME --json
   Keep CSS/JavaScript inline and embed images/fonts as data URLs in the isolated sandbox. External CDN assets, API calls,
   local relative files, browser storage, forms, and scripted popups are unsupported. Real user clicks
   on HTTP(S) links open safe new tabs; \`#fragment\` links scroll within the result.
+- Current Web readers support HTTPS child iframes. The embedded provider must allow framing and work
+  without login, origin storage, forms, or popups. Its own network requests can run; the outer HTML's
+  external assets and API calls remain blocked. HTTP, data, and blob iframe sources are blocked.
+  Older servers may still block frames: check the intended server's preview before relying on an embed.
 - A new upload requires \`--title\` (at most 120 characters); \`--description\` is optional (at most 500).
   Choose \`--as post|link\` and optionally \`--language ko|en\`. \`--folder ID\` is create-only.
   Posts use the existing reader/library; standalone links are full-viewport pages outside feed/profile lists.
@@ -98,6 +102,10 @@ scheduled_at: "2026-10-20T09:00:00+09:00" # optional future time; leave publish 
 - Link card: \`<link-card url="https://example.com" title="Title" description="Description" image="https://example.com/og.png"></link-card>\`
 - Document card: \`<document-card url="https://example.com/doc" title="Title" date="2026-01-01"></document-card>\`
 - Sandpack: a fenced \`sandpack\` block containing JSON with the files to run.
+
+Cards, YouTube embeds, and other rich blocks can render differently across Web, mobile, and desktop readers.
+Keep a descriptive ordinary Markdown link next to important embedded content and verify the intended reader.
+HTTPS iframe support in uploaded HTML does not enable scripts or arbitrary iframes in ordinary Markdown posts.
 
 ## Common mistakes
 
