@@ -99,6 +99,15 @@ scheduled_at: "2026-10-20T09:00:00+09:00" # optional future time; leave publish 
 - Math: inline \`$E = mc^2$\`, block \`$$ ... $$\` on their own lines.
 - Code: fenced code blocks with a language name after the opening fence (for example \`ts\`, \`python\`). Always close the fence.
 - Mermaid: a fenced block with the \`mermaid\` language.
+- Before / After image comparison: put exactly 2 standard Markdown images inside \`:::compare\` ... \`:::\` (first = Before/left, second = After/right; alt text becomes the label; local paths upload automatically):
+
+  \`\`\`markdown
+  :::compare
+  ![Before](./images/before.png)
+  ![After](./images/after.png)
+  :::
+  \`\`\`
+
 - Link card: \`<link-card url="https://example.com" title="Title" description="Description" image="https://example.com/og.png"></link-card>\`
 - Document card: \`<document-card url="https://example.com/doc" title="Title" date="2026-01-01"></document-card>\`
 - Sandpack: a fenced \`sandpack\` block containing JSON with the files to run.
