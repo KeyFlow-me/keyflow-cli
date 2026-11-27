@@ -1,6 +1,6 @@
 {
   "name": "@keyflow-blog/cli",
-  "version": "2026.11.25",
+  "version": "2026.11.27",
   "description": "KeyFlow Editorial Studio CLI - Push markdown drafts to your blog from the terminal",
   "main": "dist/index.js",
   "bin": {
@@ -12,7 +12,7 @@
     "README.md"
   ],
   "engines": {
-    "node": "^22.23.4 || ^24.22.1 || ^26.12.1"
+    "node": "^22.23.5 || ^24.22.3 || ^26.13.1"
   },
   "scripts": {
     "build": "tsc",

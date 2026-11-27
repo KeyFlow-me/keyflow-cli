@@ -37,11 +37,11 @@ Install the package globally via npm:
 npm install -g @keyflow-blog/cli
 ```
 
-Requires Node.js **22.23.4+**, **24.22.1+**, or **26.12.1+** within those major
+Requires Node.js **22.23.5+**, **24.22.3+**, or **26.13.1+** within those major
 versions. Earlier patches and unsupported major versions are not supported.
-These minimums include the [October 2026 Node.js security fixes](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases).
+These minimums include the [November 2026 Node.js security fixes](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases).
 
-For development, `.nvmrc` selects Node.js **24.22.1**:
+For development, `.nvmrc` selects Node.js **24.22.3**:
 
 ```bash
 nvm install
